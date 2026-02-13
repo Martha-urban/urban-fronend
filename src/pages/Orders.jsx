@@ -34,6 +34,7 @@ export default function Orders() {
   });
 
   const [orderForm, setOrderForm] = useState({
+    orderType:"ONLINE",
     deliveryCity: "",
     deliveryNotes: "",
     assignedTo: "",
@@ -111,8 +112,14 @@ export default function Orders() {
 
   function openAddModal() {
     setCustomerForm({ name: "", phone: "", email: "", city_town: "" });
-    setOrderForm({ deliveryCity: "", deliveryNotes: "", assignedTo: "" });
-    setCartItems([]);
+   setOrderForm({
+    orderType: "ONLINE",
+    deliveryCity: "",
+    deliveryNotes: "",
+    assignedTo: "",
+  });
+  
+  setCartItems([]);
     setError("");
     setIsAddOpen(true);
   }
@@ -223,66 +230,85 @@ export default function Orders() {
   }, [cartItems]);
 
   async function handleCreateOrder() {
-    if (!customerForm.name || !customerForm.phone) {
-      alert("Customer name and phone are required.");
-      return;
-    }
-
-    if (!orderForm.deliveryCity) {
-      alert("Delivery city is required.");
-      return;
-    }
-
-    if (cartItems.length === 0) {
-      alert("Add at least one product to the order.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError("");
-
-      // 1) Create customer first
-      const customerPayload = {
-        name: customerForm.name,
-        phone: customerForm.phone,
-        email: customerForm.email || null,
-        city_town: customerForm.city_town || orderForm.deliveryCity,
-      };
-
-      const customerRes = await api.post("/api/v1/customers", customerPayload);
-
-      const customerId = customerRes.data.id || customerRes.data.customerId;
-      if (!customerId)
-        throw new Error("Customer created but no customerId returned.");
-
-      // 2) Create order
-      const orderPayload = {
-        customerId,
-        assignedTo: orderForm.assignedTo || null,
-        deliveryCity: orderForm.deliveryCity,
-        deliveryNotes: orderForm.deliveryNotes || null,
-        items: cartItems.map((i) => ({
-          productId: i.productId,
-          quantity: i.quantity,
-        })),
-      };
-
-      await api.post("/api/v1/orders", orderPayload);
-
-      closeAddModal();
-      setPage(0);
-      await loadOrders();
-
-      alert("Order created successfully!");
-    } catch (e) {
-      console.log(e);
-      setError("Failed to create order. Check backend + customer endpoint.");
-      alert("Failed to create order. Check console.");
-    } finally {
-      setLoading(false);
-    }
+  if (!customerForm.name) {
+    alert("Customer name is required.");
+    return;
   }
+
+  // phone required only for ONLINE orders
+  if (orderForm.orderType === "ONLINE" && !customerForm.phone) {
+    alert("Customer phone is required for ONLINE orders.");
+    return;
+  }
+
+  // delivery city required only for ONLINE orders
+  if (orderForm.orderType === "ONLINE" && !orderForm.deliveryCity) {
+    alert("Delivery city is required for ONLINE orders.");
+    return;
+  }
+
+  if (cartItems.length === 0) {
+    alert("Add at least one product to the order.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setError("");
+
+    // 1) Create customer first
+    const customerPayload = {
+      name: customerForm.name,
+      phone: customerForm.phone || null,
+      email: customerForm.email || null,
+      city_town:
+        customerForm.city_town ||
+        (orderForm.orderType === "ONLINE" ? orderForm.deliveryCity : null),
+    };
+
+    const customerRes = await api.post("/api/v1/customers", customerPayload);
+
+    const customerId = customerRes.data.id || customerRes.data.customerId;
+    if (!customerId)
+      throw new Error("Customer created but no customerId returned.");
+
+    // 2) Create order
+    const orderPayload = {
+      customerId,
+      orderType: orderForm.orderType || "ONLINE", // ✅ IMPORTANT
+      assignedTo: orderForm.assignedTo || null,
+
+      deliveryCity:
+        orderForm.orderType === "ONLINE" ? orderForm.deliveryCity : null,
+
+      deliveryNotes:
+        orderForm.orderType === "ONLINE"
+          ? orderForm.deliveryNotes || null
+          : null,
+
+      items: cartItems.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+      })),
+    };
+
+    console.log("ORDER PAYLOAD:", orderPayload);
+
+    await api.post("/api/v1/orders", orderPayload);
+
+    closeAddModal();
+    setPage(0);
+    await loadOrders();
+
+    alert("Order created successfully!");
+  } catch (e) {
+    console.log(e);
+    setError("Failed to create order. Check backend + customer endpoint.");
+    alert("Failed to create order. Check console.");
+  } finally {
+    setLoading(false);
+  }
+}
 
   async function handleUpdateStatus() {
   if (!editingOrder?.id) return;
@@ -565,10 +591,38 @@ export default function Orders() {
               />
             </div>
 
-            {/* Order */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontWeight: 800, fontSize: 13, color: "#374151" }}>
+                Order Type
+              </label>
+
+              <select
+                value={orderForm.orderType}
+                onChange={(e) =>
+                  setOrderForm((f) => ({ ...f, orderType: e.target.value }))
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #e5e7eb",
+                  marginTop: 6,
+                  outline: "none",
+                  background: "#fff",
+                  fontWeight: 700,
+                }}
+              >
+                <option value="COUNTER">COUNTER (Walk-in)</option>
+                <option value="ONLINE">ONLINE (Delivery)</option>
+              </select>
+              </div>
+
+              {orderForm.orderType === "ONLINE" && (
+  <>
             <div style={{ fontWeight: 900, marginTop: 14, marginBottom: 8 }}>
               Delivery
             </div>
+
             <div
               style={{
                 display: "grid",
@@ -591,6 +645,9 @@ export default function Orders() {
                 style={inputStyle}
               />
             </div>
+          </>
+        )}
+
 
             {/* Items */}
             <div style={{ fontWeight: 900, marginTop: 14, marginBottom: 8 }}>
