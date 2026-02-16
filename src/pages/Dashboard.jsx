@@ -13,7 +13,7 @@ import {
 
 export default function Dashboard() {
   const [from, setFrom] = useState("2026-02-01");
-  const [to, setTo] = useState("2026-02-29");
+  const [to, setTo] = useState("2026-02-28");
 
   // Backend state
   const [loading, setLoading] = useState(false);
@@ -21,29 +21,38 @@ export default function Dashboard() {
 
   // Dashboard stats
   const [ordersCount, setOrdersCount] = useState(0);
+
   const [revenue, setRevenue] = useState(0);
-  const [expenses, setExpenses] = useState(0); // backend not yet
-  const [profit, setProfit] = useState(0);
+  const [cogs, setCogs] = useState(0);
+  const [grossProfit, setGrossProfit] = useState(0);
 
-  const profitData = useMemo(
-    () => [
-      { name: "Mon", profit: 1200 },
-      { name: "Tue", profit: 1900 },
-      { name: "Wed", profit: 900 },
-      { name: "Thu", profit: 2200 },
-      { name: "Fri", profit: 1600 },
-      { name: "Sat", profit: 2800 },
-      { name: "Sun", profit: 2000 },
-    ],
-    []
-  );
+  // Later
+  const [expenses, setExpenses] = useState(0);
+  const [netProfit, setNetProfit] = useState(0);
 
+  // Simple chart based on gross profit (until we build real daily breakdown)
+  const profitData = useMemo(() => {
+    const value = Number(grossProfit || 0);
+
+    return [
+      { name: "Mon", profit: Math.round(value * 0.12) },
+      { name: "Tue", profit: Math.round(value * 0.14) },
+      { name: "Wed", profit: Math.round(value * 0.1) },
+      { name: "Thu", profit: Math.round(value * 0.16) },
+      { name: "Fri", profit: Math.round(value * 0.18) },
+      { name: "Sat", profit: Math.round(value * 0.2) },
+      { name: "Sun", profit: Math.round(value * 0.1) },
+    ];
+  }, [grossProfit]);
+
+  // Still static for now
   const topSelling = [
     { name: "Casual Sneakers", qty: 350 },
     { name: "Denim Jacket", qty: 330 },
     { name: "Sports Watch", qty: 320 },
   ];
 
+  // Still static for now
   const recentOrders = [
     { customer: "Emily Johnson", date: "25 Feb", amount: 500 },
     { customer: "Michael Brown", date: "24 Feb", amount: 1200 },
@@ -60,7 +69,7 @@ export default function Dashboard() {
       setLoading(true);
       setError("");
 
-      // 1) Orders (count)
+      // 1) Orders count
       const ordersRes = await api.get("/api/v1/orders", {
         params: { page: 0, size: 1, sort: "createdAt,desc" },
       });
@@ -68,31 +77,30 @@ export default function Dashboard() {
       const totalOrders = ordersRes.data.totalElements || 0;
       setOrdersCount(totalOrders);
 
-      // 2) Payments (revenue)
-      // We fetch first 500 payments and sum (MVP)
-      const paymentsRes = await api.get("/api/v1/payments", {
-        params: { page: 0, size: 500, sort: "createdAt,desc" },
+      // 2) Profit Report (Revenue + COGS + Gross Profit)
+     const fromDate = `${from}T00:00:00`;
+     const toDate = `${to}T23:59:59`;
+
+
+      const reportRes = await api.get("/api/reports/profit", {
+        params: { from: fromDate, to: toDate },
       });
 
-      const payments = paymentsRes.data.content || [];
+      const rep = reportRes.data || {};
 
-      // Revenue = sum of paid payments
-      // Update this depending on your PaymentStatus enum
-      const paidPayments = payments.filter(
-        (p) => String(p.status || "").toUpperCase() === "PAID"
-      );
+      const repRevenue = Number(rep.revenue || 0);
+      const repCogs = Number(rep.cogs || 0);
+      const repGrossProfit = Number(rep.grossProfit || 0);
 
-      const totalRevenue = paidPayments.reduce((sum, p) => {
-        return sum + Number(p.amount || 0);
-      }, 0);
+      setRevenue(repRevenue);
+      setCogs(repCogs);
+      setGrossProfit(repGrossProfit);
 
-      setRevenue(totalRevenue);
-
-      // Expenses not yet implemented
+      // Expenses not implemented yet
       setExpenses(0);
 
-      // Profit = Revenue - Expenses
-      setProfit(totalRevenue - 0);
+      // Net profit = gross profit - expenses (for now expenses = 0)
+      setNetProfit(repGrossProfit - 0);
     } catch (e) {
       console.log(e);
       setError("Failed to load dashboard data.");
@@ -187,8 +195,12 @@ export default function Dashboard() {
       <div className="stat-grid">
         <StatCard title="Revenue" value={money(revenue)} tone="green" />
         <StatCard title="Orders" value={ordersCount} tone="blue" />
-        <StatCard title="Profit" value={money(profit)} tone="orange" />
-        <StatCard title="Expenses" value={money(expenses)} tone="red" />
+        <StatCard
+          title="Gross Profit"
+          value={money(grossProfit)}
+          tone="orange"
+        />
+        <StatCard title="COGS" value={money(cogs)} tone="red" />
       </div>
 
       {/* Main grid */}
@@ -206,7 +218,11 @@ export default function Dashboard() {
           >
             <h3 style={{ margin: 0, color: "#374151" }}>Gross Profit</h3>
             <div style={{ fontSize: 44, fontWeight: 700, marginTop: 10 }}>
-              {money(profit)}
+              {money(grossProfit)}
+            </div>
+
+            <div style={{ marginTop: 6, color: "#6b7280", fontSize: 14 }}>
+              Net Profit: {money(netProfit)} (Expenses not added yet)
             </div>
           </div>
 
@@ -220,8 +236,12 @@ export default function Dashboard() {
             }}
           >
             <h3 style={{ margin: 0, marginBottom: 14, color: "#374151" }}>
-              Profit Breakdown
+              Profit Breakdown (Demo)
             </h3>
+
+            <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 10 }}>
+              This chart will become real after we implement daily report APIs.
+            </div>
 
             <div style={{ height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -251,6 +271,10 @@ export default function Dashboard() {
             <h3 style={{ margin: 0, marginBottom: 12, color: "#374151" }}>
               Top Selling Products
             </h3>
+
+            <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 10 }}>
+              (We will integrate real top products next)
+            </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {topSelling.map((p, index) => (
@@ -325,40 +349,73 @@ export default function Dashboard() {
 
       {/* RESPONSIVE CSS */}
       <style>
-        {`
-          .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px;
-            margin-bottom: 16px;
-          }
+  {`
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
 
-          .dashboard-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 14px;
-            align-items: start;
-          }
+    /* Shrink all cards inside stat grid */
+    .stat-grid > div {
+      padding: 12px !important;
+      border-radius: 12px !important;
+    }
 
-          @media (max-width: 1100px) {
-            .stat-grid {
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-          }
+    /* Reduce title spacing */
+    .stat-grid > div h4,
+    .stat-grid > div h3,
+    .stat-grid > div p {
+      margin: 0 !important;
+    }
 
-          @media (max-width: 1000px) {
-            .dashboard-grid {
-              grid-template-columns: 1fr;
-            }
-          }
+    /* Smaller title */
+    .stat-grid > div p {
+      font-size: 12px !important;
+      color: #6b7280;
+    }
 
-          @media (max-width: 600px) {
-            .stat-grid {
-              grid-template-columns: 1fr;
-            }
-          }
-        `}
-      </style>
+    /* Smaller value */
+    .stat-grid > div strong {
+      font-size: 20px !important;
+    }
+
+    /* Main dashboard layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    @media (max-width: 1100px) {
+      .stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 1000px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* HIDE SIDEBAR ON MOBILE */
+    @media (max-width: 900px) {
+      .sidebar {
+        display: none !important;
+      }
+    }
+  `}
+</style>
+
     </div>
   );
 }

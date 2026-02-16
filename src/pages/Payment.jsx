@@ -97,22 +97,16 @@ export default function Payments() {
 
   // ---- MAPPERS (no UI changes, just data conversion) ----
 
-  function mapMethod(method) {
-    if (!method) return "Cash";
+    function mapMethod(method) {
+      if (!method) return "Cash";
 
-    // If your backend enum is like MPESA
-    if (method === "MPESA") return "M-Pesa";
+      if (method === "MPESA") return "M-Pesa";
+      if (method === "CASH") return "Cash";
+      if (method === "BANK") return "Bank";
 
-    // If backend enum is already "M-Pesa"
-    if (method === "M-Pesa") return "M-Pesa";
-
-    if (method === "CARD") return "Card";
-    if (method === "CASH") return "Cash";
-    if (method === "BANK") return "Bank";
-
-    return String(method);
-  }
-
+      return String(method);
+    }
+  
   function mapStatus(status) {
     if (!status) return "Pending";
 
