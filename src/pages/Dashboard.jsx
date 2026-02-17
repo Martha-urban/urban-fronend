@@ -26,13 +26,13 @@ export default function Dashboard() {
   const [cogs, setCogs] = useState(0);
   const [grossProfit, setGrossProfit] = useState(0);
 
-  // Later
+  // Expenses + Net Profit
   const [expenses, setExpenses] = useState(0);
   const [netProfit, setNetProfit] = useState(0);
 
-  // Simple chart based on gross profit (until we build real daily breakdown)
+  // Demo chart based on net profit (until we build real daily breakdown)
   const profitData = useMemo(() => {
-    const value = Number(grossProfit || 0);
+    const value = Number(netProfit || 0);
 
     return [
       { name: "Mon", profit: Math.round(value * 0.12) },
@@ -43,7 +43,7 @@ export default function Dashboard() {
       { name: "Sat", profit: Math.round(value * 0.2) },
       { name: "Sun", profit: Math.round(value * 0.1) },
     ];
-  }, [grossProfit]);
+  }, [netProfit]);
 
   // Still static for now
   const topSelling = [
@@ -69,6 +69,12 @@ export default function Dashboard() {
       setLoading(true);
       setError("");
 
+      // Basic validation
+      if (new Date(to) < new Date(from)) {
+        setError("To date cannot be before From date.");
+        return;
+      }
+
       // 1) Orders count
       const ordersRes = await api.get("/api/v1/orders", {
         params: { page: 0, size: 1, sort: "createdAt,desc" },
@@ -77,10 +83,9 @@ export default function Dashboard() {
       const totalOrders = ordersRes.data.totalElements || 0;
       setOrdersCount(totalOrders);
 
-      // 2) Profit Report (Revenue + COGS + Gross Profit)
-     const fromDate = `${from}T00:00:00`;
-     const toDate = `${to}T23:59:59`;
-
+      // 2) Profit Report (Revenue + COGS + Gross Profit + Expenses + Net Profit)
+      const fromDate = `${from}T00:00:00`;
+      const toDate = `${to}T23:59:59`;
 
       const reportRes = await api.get("/api/reports/profit", {
         params: { from: fromDate, to: toDate },
@@ -88,19 +93,11 @@ export default function Dashboard() {
 
       const rep = reportRes.data || {};
 
-      const repRevenue = Number(rep.revenue || 0);
-      const repCogs = Number(rep.cogs || 0);
-      const repGrossProfit = Number(rep.grossProfit || 0);
-
-      setRevenue(repRevenue);
-      setCogs(repCogs);
-      setGrossProfit(repGrossProfit);
-
-      // Expenses not implemented yet
-      setExpenses(0);
-
-      // Net profit = gross profit - expenses (for now expenses = 0)
-      setNetProfit(repGrossProfit - 0);
+      setRevenue(Number(rep.revenue || 0));
+      setCogs(Number(rep.cogs || 0));
+      setGrossProfit(Number(rep.grossProfit || 0));
+      setExpenses(Number(rep.expenses || 0));
+      setNetProfit(Number(rep.netProfit || 0));
     } catch (e) {
       console.log(e);
       setError("Failed to load dashboard data.");
@@ -195,12 +192,9 @@ export default function Dashboard() {
       <div className="stat-grid">
         <StatCard title="Revenue" value={money(revenue)} tone="green" />
         <StatCard title="Orders" value={ordersCount} tone="blue" />
-        <StatCard
-          title="Gross Profit"
-          value={money(grossProfit)}
-          tone="orange"
-        />
+        <StatCard title="Gross Profit" value={money(grossProfit)} tone="orange" />
         <StatCard title="COGS" value={money(cogs)} tone="red" />
+        <StatCard title="Expenses" value={money(expenses)} tone="black" />
       </div>
 
       {/* Main grid */}
@@ -222,7 +216,7 @@ export default function Dashboard() {
             </div>
 
             <div style={{ marginTop: 6, color: "#6b7280", fontSize: 14 }}>
-              Net Profit: {money(netProfit)} (Expenses not added yet)
+              Net Profit: {money(netProfit)}
             </div>
           </div>
 
@@ -349,73 +343,77 @@ export default function Dashboard() {
 
       {/* RESPONSIVE CSS */}
       <style>
-  {`
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 14px;
-    }
+        {`
+          .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+          }
 
-    /* Shrink all cards inside stat grid */
-    .stat-grid > div {
-      padding: 12px !important;
-      border-radius: 12px !important;
-    }
+          /* Shrink all cards inside stat grid */
+          .stat-grid > div {
+            padding: 12px !important;
+            border-radius: 12px !important;
+          }
 
-    /* Reduce title spacing */
-    .stat-grid > div h4,
-    .stat-grid > div h3,
-    .stat-grid > div p {
-      margin: 0 !important;
-    }
+          /* Reduce title spacing */
+          .stat-grid > div h4,
+          .stat-grid > div h3,
+          .stat-grid > div p {
+            margin: 0 !important;
+          }
 
-    /* Smaller title */
-    .stat-grid > div p {
-      font-size: 12px !important;
-      color: #6b7280;
-    }
+          /* Smaller title */
+          .stat-grid > div p {
+            font-size: 12px !important;
+            color: #6b7280;
+          }
 
-    /* Smaller value */
-    .stat-grid > div strong {
-      font-size: 20px !important;
-    }
+          /* Smaller value */
+          .stat-grid > div strong {
+            font-size: 20px !important;
+          }
 
-    /* Main dashboard layout */
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 14px;
-      align-items: start;
-    }
+          .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 14px;
+            align-items: start;
+          }
 
-    @media (max-width: 1100px) {
-      .stat-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
+          @media (max-width: 1300px) {
+            .stat-grid {
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+          }
 
-    @media (max-width: 1000px) {
-      .dashboard-grid {
-        grid-template-columns: 1fr;
-      }
-    }
+          @media (max-width: 1100px) {
+            .stat-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+          }
 
-    @media (max-width: 600px) {
-      .stat-grid {
-        grid-template-columns: 1fr;
-      }
-    }
+          @media (max-width: 1000px) {
+            .dashboard-grid {
+              grid-template-columns: 1fr;
+            }
+          }
 
-    /* HIDE SIDEBAR ON MOBILE */
-    @media (max-width: 900px) {
-      .sidebar {
-        display: none !important;
-      }
-    }
-  `}
-</style>
+          @media (max-width: 600px) {
+            .stat-grid {
+              grid-template-columns: 1fr;
+            }
+          }
 
+          /* HIDE SIDEBAR ON MOBILE */
+          @media (max-width: 900px) {
+            .sidebar {
+              display: none !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }

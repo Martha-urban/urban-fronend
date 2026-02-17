@@ -45,6 +45,10 @@ export default function Sidebar({ onClose }) {
           Products
         </NavLink>
 
+        <NavLink to="expenses" className={linkClass} onClick={onclose}>
+          Expense
+        </NavLink>
+
         <NavLink to="/payments" className={linkClass} onClick={onClose}>
           Payments
         </NavLink>

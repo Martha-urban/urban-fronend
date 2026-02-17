@@ -11,6 +11,7 @@ import Staff from "./pages/Staff";
 import Login from "./pages/Login";
 import Category from "./pages/Category";
 import Product from "./pages/Product";
+import Expenses from "./pages/Expense";
 
 function PrivateRoute({ children }) {
 const token = localStorage.getItem("urban_access_token");
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="categories" element={<Category />} />
         <Route path="products" element={<Product />} /> 
         <Route path="payments" element={<Payment />} />
+        <Route path="expenses" element={<Expenses/>} />
         <Route path="inventory" element={<Inventory />} />
         <Route path="staff" element={<Staff />} />
         <Route path="staff-logs" element={<StaffLogs />} />
