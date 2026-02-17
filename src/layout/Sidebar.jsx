@@ -17,7 +17,8 @@ export default function Sidebar({ onClose, mobile = false }) {
     >
       {/* Brand */}
       <div className="px-6 py-5 font-bold tracking-wide text-lg border-b border-white/10 flex items-center justify-between">
-        <span>URBAN TRENDS</span>
+        <span>URBAN TRENDS ✅</span>
+
 
         {/* Close button (mobile only) */}
         {mobile && onClose && (
