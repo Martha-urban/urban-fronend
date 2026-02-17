@@ -83,7 +83,7 @@ export default function Dashboard() {
       const totalOrders = ordersRes.data.totalElements || 0;
       setOrdersCount(totalOrders);
 
-      // 2) Profit Report (Revenue + COGS + Gross Profit + Expenses + Net Profit)
+      // 2) Profit Report
       const fromDate = `${from}T00:00:00`;
       const toDate = `${to}T23:59:59`;
 
@@ -111,85 +111,48 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ padding: 18 }}>
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div style={{ marginBottom: 14 }}>
-        <h2 style={{ margin: 0, fontSize: 22 }}>Dashboard</h2>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
+      <div className="mb-4">
+        <h2 className="m-0 text-[22px] font-bold text-slate-900">Dashboard</h2>
+        <p className="mt-1 text-slate-500">
           {from} to {to}
         </p>
       </div>
 
       {/* Filters row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          marginBottom: 18,
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: "#fff",
-            borderRadius: 12,
-            padding: 12,
-            border: "1px solid #e5e7eb",
-            flexWrap: "wrap",
-          }}
-        >
-          <label style={{ color: "#6b7280", fontSize: 14 }}>From:</label>
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <div className="flex flex-wrap items-center gap-3 bg-white rounded-xl p-3 border border-slate-200">
+          <label className="text-slate-500 text-sm">From:</label>
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            style={{
-              border: "1px solid #e5e7eb",
-              padding: "8px 10px",
-              borderRadius: 10,
-            }}
+            className="border border-slate-200 px-3 py-2 rounded-xl"
           />
 
-          <label style={{ color: "#6b7280", fontSize: 14 }}>To:</label>
+          <label className="text-slate-500 text-sm">To:</label>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            style={{
-              border: "1px solid #e5e7eb",
-              padding: "8px 10px",
-              borderRadius: 10,
-            }}
+            className="border border-slate-200 px-3 py-2 rounded-xl"
           />
         </div>
 
         <button
           onClick={loadDashboard}
-          style={{
-            border: "1px solid #e5e7eb",
-            background: "#111827",
-            color: "#fff",
-            padding: "10px 14px",
-            borderRadius: 12,
-            cursor: "pointer",
-            fontWeight: 800,
-          }}
+          className="border border-slate-200 bg-slate-900 text-white px-4 py-2.5 rounded-xl font-extrabold"
         >
           {loading ? "Loading..." : "Apply"}
         </button>
       </div>
 
       {/* Error */}
-      {error && (
-        <div style={{ marginBottom: 12, color: "crimson" }}>{error}</div>
-      )}
+      {error && <div className="mb-3 text-red-600">{error}</div>}
 
       {/* Stat Cards */}
-      <div className="stat-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-4">
         <StatCard title="Revenue" value={money(revenue)} tone="green" />
         <StatCard title="Orders" value={ordersCount} tone="blue" />
         <StatCard title="Gross Profit" value={money(grossProfit)} tone="orange" />
@@ -198,46 +161,33 @@ export default function Dashboard() {
       </div>
 
       {/* Main grid */}
-      <div className="dashboard-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         {/* LEFT SIDE */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="flex flex-col gap-4 lg:col-span-2">
           {/* Gross Profit */}
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 14,
-              padding: 18,
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            <h3 style={{ margin: 0, color: "#374151" }}>Gross Profit</h3>
-            <div style={{ fontSize: 44, fontWeight: 700, marginTop: 10 }}>
+          <div className="bg-white rounded-2xl p-5 border border-slate-200">
+            <h3 className="m-0 text-slate-700 font-bold">Gross Profit</h3>
+
+            <div className="text-[38px] sm:text-[44px] font-bold mt-2 text-slate-900">
               {money(grossProfit)}
             </div>
 
-            <div style={{ marginTop: 6, color: "#6b7280", fontSize: 14 }}>
+            <div className="mt-1 text-slate-500 text-sm">
               Net Profit: {money(netProfit)}
             </div>
           </div>
 
           {/* Profit Breakdown */}
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 14,
-              padding: 18,
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            <h3 style={{ margin: 0, marginBottom: 14, color: "#374151" }}>
+          <div className="bg-white rounded-2xl p-5 border border-slate-200">
+            <h3 className="m-0 mb-3 text-slate-700 font-bold">
               Profit Breakdown (Demo)
             </h3>
 
-            <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 10 }}>
+            <div className="text-slate-500 text-sm mb-3">
               This chart will become real after we implement daily report APIs.
             </div>
 
-            <div style={{ height: 300 }}>
+            <div className="h-[280px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={profitData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -252,168 +202,69 @@ export default function Dashboard() {
         </div>
 
         {/* RIGHT SIDE */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="flex flex-col gap-4 lg:col-span-1">
           {/* Top Selling Products */}
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 14,
-              padding: 18,
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            <h3 style={{ margin: 0, marginBottom: 12, color: "#374151" }}>
+          <div className="bg-white rounded-2xl p-5 border border-slate-200">
+            <h3 className="m-0 mb-3 text-slate-700 font-bold">
               Top Selling Products
             </h3>
 
-            <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 10 }}>
+            <div className="text-slate-500 text-sm mb-3">
               (We will integrate real top products next)
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="flex flex-col gap-3">
               {topSelling.map((p, index) => (
                 <div
                   key={p.name}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    paddingBottom: 10,
-                    borderBottom:
-                      index === topSelling.length - 1
-                        ? "none"
-                        : "1px solid #f3f4f6",
-                  }}
+                  className={`flex justify-between items-center pb-3 ${
+                    index === topSelling.length - 1
+                      ? ""
+                      : "border-b border-slate-100"
+                  }`}
                 >
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <strong style={{ width: 18 }}>{index + 1}.</strong>
+                  <div className="flex gap-3">
+                    <strong className="w-5">{index + 1}.</strong>
                     <span>{p.name}</span>
                   </div>
-                  <span style={{ fontWeight: 700 }}>{p.qty}</span>
+                  <span className="font-bold">{p.qty}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Recent Orders */}
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 14,
-              padding: 18,
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            <h3 style={{ margin: 0, marginBottom: 12, color: "#374151" }}>
+          <div className="bg-white rounded-2xl p-5 border border-slate-200">
+            <h3 className="m-0 mb-3 text-slate-700 font-bold">
               Recent Orders
             </h3>
 
-            <div style={{ color: "#6b7280", fontSize: 13 }}>
+            <div className="text-slate-500 text-sm mb-3">
               (We will integrate real recent orders next)
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="flex flex-col gap-3">
               {recentOrders.map((o, idx) => (
                 <div
                   key={idx}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    borderBottom:
-                      idx === recentOrders.length - 1
-                        ? "none"
-                        : "1px solid #f3f4f6",
-                    paddingBottom: 10,
-                  }}
+                  className={`flex justify-between pb-3 ${
+                    idx === recentOrders.length - 1
+                      ? ""
+                      : "border-b border-slate-100"
+                  }`}
                 >
                   <div>
-                    <div style={{ fontWeight: 600 }}>{o.customer}</div>
-                    <div style={{ color: "#6b7280", fontSize: 13 }}>
-                      {o.date}
-                    </div>
+                    <div className="font-semibold">{o.customer}</div>
+                    <div className="text-slate-500 text-sm">{o.date}</div>
                   </div>
 
-                  <div style={{ fontWeight: 700 }}>{money(o.amount)}</div>
+                  <div className="font-bold">{money(o.amount)}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
-
-      {/* RESPONSIVE CSS */}
-      <style>
-        {`
-          .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 10px;
-            margin-bottom: 14px;
-          }
-
-          /* Shrink all cards inside stat grid */
-          .stat-grid > div {
-            padding: 12px !important;
-            border-radius: 12px !important;
-          }
-
-          /* Reduce title spacing */
-          .stat-grid > div h4,
-          .stat-grid > div h3,
-          .stat-grid > div p {
-            margin: 0 !important;
-          }
-
-          /* Smaller title */
-          .stat-grid > div p {
-            font-size: 12px !important;
-            color: #6b7280;
-          }
-
-          /* Smaller value */
-          .stat-grid > div strong {
-            font-size: 20px !important;
-          }
-
-          .dashboard-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 14px;
-            align-items: start;
-          }
-
-          @media (max-width: 1300px) {
-            .stat-grid {
-              grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-          }
-
-          @media (max-width: 1100px) {
-            .stat-grid {
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-          }
-
-          @media (max-width: 1000px) {
-            .dashboard-grid {
-              grid-template-columns: 1fr;
-            }
-          }
-
-          @media (max-width: 600px) {
-            .stat-grid {
-              grid-template-columns: 1fr;
-            }
-          }
-
-          /* HIDE SIDEBAR ON MOBILE */
-          @media (max-width: 900px) {
-            .sidebar {
-              display: none !important;
-            }
-          }
-        `}
-      </style>
     </div>
   );
 }
