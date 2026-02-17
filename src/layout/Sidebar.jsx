@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 
-export default function Sidebar({ onClose }) {
+export default function Sidebar({ onClose, mobile = false }) {
   const linkClass = ({ isActive }) =>
     `block px-4 py-3 rounded-xl transition font-medium
      ${
@@ -11,13 +11,16 @@ export default function Sidebar({ onClose }) {
      }`;
 
   return (
-    <aside className="w-[260px] h-full bg-slate-800 text-white flex flex-col">
+    <aside
+      className={`w-[260px] h-full bg-slate-800 text-white flex flex-col
+      ${mobile ? "flex" : "hidden lg:flex"}`}
+    >
       {/* Brand */}
       <div className="px-6 py-5 font-bold tracking-wide text-lg border-b border-white/10 flex items-center justify-between">
         <span>URBAN TRENDS</span>
 
         {/* Close button (mobile only) */}
-        {onClose && (
+        {mobile && onClose && (
           <button
             onClick={onClose}
             className="lg:hidden text-white text-xl font-bold"
@@ -45,7 +48,7 @@ export default function Sidebar({ onClose }) {
           Products
         </NavLink>
 
-        <NavLink to="expenses" className={linkClass} onClick={onclose}>
+        <NavLink to="/expenses" className={linkClass} onClick={onClose}>
           Expense
         </NavLink>
 

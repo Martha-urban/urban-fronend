@@ -8,10 +8,7 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen w-screen flex bg-slate-100">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
-        <Sidebar />
-      </div>
+      <Sidebar />
 
       {/* Mobile Sidebar Drawer */}
       {mobileOpen && (
@@ -20,10 +17,10 @@ export default function AppLayout() {
           onClick={() => setMobileOpen(false)}
         >
           <div
-            className="h-full w-[260px] bg-slate-800 text-white"
+            className="h-full w-[260px]"
             onClick={(e) => e.stopPropagation()}
           >
-            <Sidebar onClose={() => setMobileOpen(false)} />
+            <Sidebar mobile={true} onClose={() => setMobileOpen(false)} />
           </div>
         </div>
       )}
