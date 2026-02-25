@@ -44,7 +44,6 @@ export default function Inventory() {
       setLoading(true);
       setError("");
 
-      // Get products pageable (load first 200)
       const res = await api.get("/api/v1/products", {
         params: { page: 0, size: 200, sort: "createdAt,desc" },
       });
@@ -63,7 +62,6 @@ export default function Inventory() {
 
   async function loadInventoryForProducts(productList) {
     try {
-      // 🔥 parallel inventory requests
       const results = await Promise.all(
         productList.map(async (p) => {
           try {
@@ -91,13 +89,10 @@ export default function Inventory() {
       const res = await api.get("/api/v1/inventory/low-stock");
       const data = res.data || [];
 
-      // Normalize low stock response into product-like shape
       const normalized = data
         .map((x) => {
-          // If backend already returns products
           if (x.id && x.name && x.sku) return x;
 
-          // If backend returns inventory objects
           return {
             id: x.productId || x.product?.id || x.id,
             name: x.productName || x.product?.name || x.name,
@@ -126,7 +121,6 @@ export default function Inventory() {
     const inv = inventoryMap[productId];
     if (!inv) return "-";
 
-    // support different backend field names
     if (inv.quantity !== undefined) return inv.quantity;
     if (inv.stock !== undefined) return inv.stock;
     if (inv.available !== undefined) return inv.available;
@@ -227,6 +221,52 @@ export default function Inventory() {
 
   return (
     <div style={{ padding: 18 }}>
+      {/* ✅ RESPONSIVE CSS */}
+      <style>{`
+        @media (max-width: 768px) {
+          .inv-toolbar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+          }
+
+          .inv-search {
+            min-width: 100% !important;
+            width: 100% !important;
+          }
+
+          .inv-tabs {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          .inv-desktop-header,
+          .inv-desktop-row {
+            display: none !important;
+          }
+
+          .inv-mobile-card {
+            display: block;
+            padding: 14px;
+            border-top: 1px solid #f3f4f6;
+            background: #fff;
+          }
+
+          .inv-actions {
+            flex-wrap: wrap;
+            white-space: normal !important;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .inv-mobile-card {
+            display: none;
+          }
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{ marginBottom: 14 }}>
         <h2 style={{ margin: 0, fontSize: 22 }}>Inventory</h2>
@@ -237,6 +277,7 @@ export default function Inventory() {
 
       {/* Tabs + Search */}
       <div
+        className="inv-toolbar"
         style={{
           display: "flex",
           gap: 10,
@@ -249,30 +290,33 @@ export default function Inventory() {
           alignItems: "center",
         }}
       >
-        {tabs.map((tab) => {
-          const active = activeTab === tab;
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                border: "none",
-                padding: "10px 14px",
-                borderRadius: 12,
-                cursor: "pointer",
-                background: active ? "#2563eb" : "transparent",
-                color: active ? "#fff" : "#374151",
-                fontWeight: 800,
-              }}
-            >
-              {tab}
-            </button>
-          );
-        })}
+        <div className="inv-tabs">
+          {tabs.map((tab) => {
+            const active = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  border: "none",
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  background: active ? "#2563eb" : "transparent",
+                  color: active ? "#fff" : "#374151",
+                  fontWeight: 800,
+                }}
+              >
+                {tab}
+              </button>
+            );
+          })}
+        </div>
 
         <div style={{ flex: 1 }} />
 
         <div
+          className="inv-search"
           style={{
             display: "flex",
             alignItems: "center",
@@ -314,8 +358,9 @@ export default function Inventory() {
           overflow: "hidden",
         }}
       >
-        {/* Header */}
+        {/* Desktop Header */}
         <div
+          className="inv-desktop-header"
           style={{
             display: "grid",
             gridTemplateColumns: "1.6fr 1fr 1fr 1fr",
@@ -339,53 +384,97 @@ export default function Inventory() {
           const badge = stockBadge(stock);
 
           return (
-            <div
-              key={p.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.6fr 1fr 1fr 1fr",
-                gap: 10,
-                padding: "14px 16px",
-                borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
-                alignItems: "center",
-                fontSize: 14,
-              }}
-            >
-              <div style={{ fontWeight: 900 }}>{p.name}</div>
-              <div style={{ fontWeight: 700 }}>{p.sku}</div>
+            <React.Fragment key={p.id}>
+              {/* Desktop Row */}
+              <div
+                className="inv-desktop-row"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.6fr 1fr 1fr 1fr",
+                  gap: 10,
+                  padding: "14px 16px",
+                  borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
+                  alignItems: "center",
+                  fontSize: 14,
+                }}
+              >
+                <div style={{ fontWeight: 900 }}>{p.name}</div>
+                <div style={{ fontWeight: 700 }}>{p.sku}</div>
 
-              <div>
-                <span
-                  style={{
-                    background: badge.bg,
-                    color: badge.color,
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    fontWeight: 900,
-                    fontSize: 13,
-                  }}
-                >
-                  {stock}
-                </span>
+                <div>
+                  <span
+                    style={{
+                      background: badge.bg,
+                      color: badge.color,
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      fontWeight: 900,
+                      fontSize: 13,
+                    }}
+                  >
+                    {stock}
+                  </span>
+                </div>
+
+                <div className="inv-actions" style={{ display: "flex", gap: 8, whiteSpace: "nowrap" }}>
+                  <button onClick={() => openRestockModal(p)} style={actionBtn}>
+                    ➕ Restock
+                  </button>
+
+                  <button
+                    onClick={() => openReduceModal(p)}
+                    style={{
+                      ...actionBtn,
+                      background: "#fff7ed",
+                      color: "#9a3412",
+                    }}
+                  >
+                    ➖ Reduce
+                  </button>
+                </div>
               </div>
 
-              <div style={{ display: "flex", gap: 8, whiteSpace: "nowrap" }}>
-                <button onClick={() => openRestockModal(p)} style={actionBtn}>
-                  ➕ Restock
-                </button>
+              {/* Mobile Card */}
+              <div className="inv-mobile-card">
+                <div style={{ fontWeight: 900, fontSize: 16 }}>{p.name}</div>
+                <div style={{ marginTop: 6, color: "#6b7280" }}>
+                  SKU: <b style={{ color: "#374151" }}>{p.sku || "-"}</b>
+                </div>
 
-                <button
-                  onClick={() => openReduceModal(p)}
-                  style={{
-                    ...actionBtn,
-                    background: "#fff7ed",
-                    color: "#9a3412",
-                  }}
-                >
-                  ➖ Reduce
-                </button>
+                <div style={{ marginTop: 10 }}>
+                  <span
+                    style={{
+                      background: badge.bg,
+                      color: badge.color,
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      fontWeight: 900,
+                      fontSize: 13,
+                      display: "inline-block",
+                    }}
+                  >
+                    Stock: {stock}
+                  </span>
+                </div>
+
+                <div className="inv-actions" style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <button onClick={() => openRestockModal(p)} style={actionBtn}>
+                    ➕ Restock
+                  </button>
+
+                  <button
+                    onClick={() => openReduceModal(p)}
+                    style={{
+                      ...actionBtn,
+                      background: "#fff7ed",
+                      color: "#9a3412",
+                    }}
+                  >
+                    ➖ Reduce
+                  </button>
+                </div>
               </div>
-            </div>
+            </React.Fragment>
           );
         })}
 
@@ -429,14 +518,7 @@ export default function Inventory() {
               style={{ ...inputStyle, marginTop: 12 }}
             />
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 10,
-                marginTop: 16,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
               <button onClick={closeRestockModal} style={cancelBtn}>
                 Cancel
               </button>
@@ -467,14 +549,7 @@ export default function Inventory() {
               style={inputStyle}
             />
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 10,
-                marginTop: 16,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
               <button onClick={closeReduceModal} style={cancelBtn}>
                 Cancel
               </button>

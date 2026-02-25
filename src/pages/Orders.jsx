@@ -34,7 +34,7 @@ export default function Orders() {
   });
 
   const [orderForm, setOrderForm] = useState({
-    orderType:"ONLINE",
+    orderType: "ONLINE",
     deliveryCity: "",
     deliveryNotes: "",
     assignedTo: "",
@@ -112,14 +112,14 @@ export default function Orders() {
 
   function openAddModal() {
     setCustomerForm({ name: "", phone: "", email: "", city_town: "" });
-   setOrderForm({
-    orderType: "ONLINE",
-    deliveryCity: "",
-    deliveryNotes: "",
-    assignedTo: "",
-  });
-  
-  setCartItems([]);
+    setOrderForm({
+      orderType: "ONLINE",
+      deliveryCity: "",
+      deliveryNotes: "",
+      assignedTo: "",
+    });
+
+    setCartItems([]);
     setError("");
     setIsAddOpen(true);
   }
@@ -230,125 +230,176 @@ export default function Orders() {
   }, [cartItems]);
 
   async function handleCreateOrder() {
-  if (!customerForm.name) {
-    alert("Customer name is required.");
-    return;
+    if (!customerForm.name) {
+      alert("Customer name is required.");
+      return;
+    }
+
+    // phone required only for ONLINE orders
+    if (orderForm.orderType === "ONLINE" && !customerForm.phone) {
+      alert("Customer phone is required for ONLINE orders.");
+      return;
+    }
+
+    // delivery city required only for ONLINE orders
+    if (orderForm.orderType === "ONLINE" && !orderForm.deliveryCity) {
+      alert("Delivery city is required for ONLINE orders.");
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      alert("Add at least one product to the order.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+
+      // 1) Create customer first
+      const customerPayload = {
+        name: customerForm.name,
+        phone: customerForm.phone || null,
+        email: customerForm.email || null,
+        city_town:
+          customerForm.city_town ||
+          (orderForm.orderType === "ONLINE" ? orderForm.deliveryCity : null),
+      };
+
+      const customerRes = await api.post("/api/v1/customers", customerPayload);
+
+      const customerId = customerRes.data.id || customerRes.data.customerId;
+      if (!customerId)
+        throw new Error("Customer created but no customerId returned.");
+
+      // 2) Create order
+      const orderPayload = {
+        customerId,
+        orderType: orderForm.orderType || "ONLINE",
+        assignedTo: orderForm.assignedTo || null,
+
+        deliveryCity:
+          orderForm.orderType === "ONLINE" ? orderForm.deliveryCity : null,
+
+        deliveryNotes:
+          orderForm.orderType === "ONLINE"
+            ? orderForm.deliveryNotes || null
+            : null,
+
+        items: cartItems.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+        })),
+      };
+
+      console.log("ORDER PAYLOAD:", orderPayload);
+
+      await api.post("/api/v1/orders", orderPayload);
+
+      closeAddModal();
+      setPage(0);
+      await loadOrders();
+
+      alert("Order created successfully!");
+    } catch (e) {
+      console.log(e);
+      setError("Failed to create order. Check backend + customer endpoint.");
+      alert("Failed to create order. Check console.");
+    } finally {
+      setLoading(false);
+    }
   }
-
-  // phone required only for ONLINE orders
-  if (orderForm.orderType === "ONLINE" && !customerForm.phone) {
-    alert("Customer phone is required for ONLINE orders.");
-    return;
-  }
-
-  // delivery city required only for ONLINE orders
-  if (orderForm.orderType === "ONLINE" && !orderForm.deliveryCity) {
-    alert("Delivery city is required for ONLINE orders.");
-    return;
-  }
-
-  if (cartItems.length === 0) {
-    alert("Add at least one product to the order.");
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setError("");
-
-    // 1) Create customer first
-    const customerPayload = {
-      name: customerForm.name,
-      phone: customerForm.phone || null,
-      email: customerForm.email || null,
-      city_town:
-        customerForm.city_town ||
-        (orderForm.orderType === "ONLINE" ? orderForm.deliveryCity : null),
-    };
-
-    const customerRes = await api.post("/api/v1/customers", customerPayload);
-
-    const customerId = customerRes.data.id || customerRes.data.customerId;
-    if (!customerId)
-      throw new Error("Customer created but no customerId returned.");
-
-    // 2) Create order
-    const orderPayload = {
-      customerId,
-      orderType: orderForm.orderType || "ONLINE", // ✅ IMPORTANT
-      assignedTo: orderForm.assignedTo || null,
-
-      deliveryCity:
-        orderForm.orderType === "ONLINE" ? orderForm.deliveryCity : null,
-
-      deliveryNotes:
-        orderForm.orderType === "ONLINE"
-          ? orderForm.deliveryNotes || null
-          : null,
-
-      items: cartItems.map((i) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-      })),
-    };
-
-    console.log("ORDER PAYLOAD:", orderPayload);
-
-    await api.post("/api/v1/orders", orderPayload);
-
-    closeAddModal();
-    setPage(0);
-    await loadOrders();
-
-    alert("Order created successfully!");
-  } catch (e) {
-    console.log(e);
-    setError("Failed to create order. Check backend + customer endpoint.");
-    alert("Failed to create order. Check console.");
-  } finally {
-    setLoading(false);
-  }
-}
 
   async function handleUpdateStatus() {
-  if (!editingOrder?.id) return;
+    if (!editingOrder?.id) return;
 
-  try {
-    setLoading(true);
-    setError("");
+    try {
+      setLoading(true);
+      setError("");
 
-    await api.patch(`/api/v1/orders/${editingOrder.id}/status`, null, {
-      params: { status: editStatus },
-    });
+      await api.patch(`/api/v1/orders/${editingOrder.id}/status`, null, {
+        params: { status: editStatus },
+      });
 
-    closeEditModal();
-    await loadOrders();
+      closeEditModal();
+      await loadOrders();
 
-    alert("Order status updated!");
-  } catch (e) {
-    console.log(e);
-    setError("Failed to update status.");
-    alert("Failed to update status. Check console.");
-  } finally {
-    setLoading(false);
+      alert("Order status updated!");
+    } catch (e) {
+      console.log(e);
+      setError("Failed to update status.");
+      alert("Failed to update status. Check console.");
+    } finally {
+      setLoading(false);
+    }
   }
-}
-
 
   return (
     <div style={{ padding: 18 }}>
+      {/* ✅ Responsive CSS must be INSIDE return */}
+      <style>{`
+        @media (max-width: 768px) {
+          .desktop-table-header,
+          .desktop-row {
+            display: none !important;
+          }
+
+          .mobile-card {
+            display: block;
+            padding: 14px;
+            border-top: 1px solid #f3f4f6;
+            background: #fff;
+          }
+
+          .responsive-grid-2 {
+            grid-template-columns: 1fr !important;
+          }
+
+          .responsive-grid-3 {
+            grid-template-columns: 1fr !important;
+          }
+
+          .header-flex {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 12px;
+          }
+
+          .header-actions {
+            width: 100%;
+            justify-content: space-between;
+          }
+
+          .actions-row {
+            flex-wrap: wrap;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .mobile-card {
+            display: none;
+          }
+        }
+      `}</style>
+
       {/* Header */}
       <div
+        className="header-flex"
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: 12,
+          flexWrap: "wrap",
+          gap: 10,
         }}
       >
         <h2 style={{ margin: 0, fontSize: 22 }}>Orders</h2>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div
+          className="header-actions"
+          style={{ display: "flex", gap: 10, alignItems: "center" }}
+        >
           <button onClick={openAddModal} style={addOrderBtn}>
             + Add Order
           </button>
@@ -386,8 +437,9 @@ export default function Orders() {
           overflow: "hidden",
         }}
       >
-        {/* Table Header */}
+        {/* Table Header (Desktop only) */}
         <div
+          className="desktop-table-header"
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1.2fr 1fr 0.9fr",
@@ -399,8 +451,8 @@ export default function Orders() {
             fontSize: 14,
           }}
         >
-          <div>Customer </div>
-          <div>Product </div>
+          <div>Customer</div>
+          <div>Product</div>
           <div>Amount</div>
           <div>Status</div>
           <div>Delivery City</div>
@@ -419,69 +471,119 @@ export default function Orders() {
             const s = statusStyle(o.orderStatus);
 
             return (
-              <div
-                key={o.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1.2fr 1fr 0.9fr",
-                  gap: 10,
-                  padding: "14px 16px",
-                  borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
-                  alignItems: "center",
-                  fontSize: 14,
-                }}
-              >
-                <div style={{ color: "#374151" }}>
-                  {String(o.customerName)}
+              <React.Fragment key={o.id}>
+                {/* Desktop row */}
+                <div
+                  className="desktop-row"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1.2fr 1fr 0.9fr",
+                    gap: 10,
+                    padding: "14px 16px",
+                    borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
+                    alignItems: "center",
+                    fontSize: 14,
+                  }}
+                >
+                  <div style={{ color: "#374151" }}>
+                    {String(o.customerName)}
+                  </div>
+
+                  <div style={{ color: "#374151" }}>
+                    {String(o.productName)}
+                  </div>
+
+                  <div>
+                    <span
+                      style={{
+                        background: "#e5e7eb",
+                        padding: "6px 10px",
+                        borderRadius: 10,
+                        fontWeight: 900,
+                        display: "inline-block",
+                        minWidth: 80,
+                        textAlign: "center",
+                      }}
+                    >
+                      {formatMoney(o.totalAmount)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span
+                      style={{
+                        background: s.bg,
+                        color: s.color,
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        fontWeight: 900,
+                        fontSize: 12,
+                      }}
+                    >
+                      {niceStatus(o.orderStatus)}
+                    </span>
+                  </div>
+
+                  <div>{o.deliveryCity || "-"}</div>
+
+                  <div style={{ fontWeight: 700 }}>
+                    {o.createdAt ? String(o.createdAt).slice(0, 10) : "-"}
+                  </div>
+
+                  <div>
+                    <button onClick={() => openEditModal(o)} style={editBtn}>
+                      ✏️ Edit
+                    </button>
+                  </div>
                 </div>
 
-                 <div style={{ color: "#374151" }}>
-                  {String(o.productName)}
-                </div>
+                {/* Mobile card */}
+                <div className="mobile-card">
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 900, fontSize: 16 }}>
+                        {String(o.customerName)}
+                      </div>
+                      <div style={{ color: "#6b7280", marginTop: 2 }}>
+                        {String(o.productName)}
+                      </div>
+                    </div>
 
-                <div>
-                  <span
-                    style={{
-                      background: "#e5e7eb",
-                      padding: "6px 10px",
-                      borderRadius: 10,
-                      fontWeight: 900,
-                      display: "inline-block",
-                      minWidth: 80,
-                      textAlign: "center",
-                    }}
-                  >
-                    {formatMoney(o.totalAmount)}
-                  </span>
-                </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontWeight: 900 }}>{formatMoney(o.totalAmount)}</div>
+                      <div style={{ marginTop: 6 }}>
+                        <span
+                          style={{
+                            background: s.bg,
+                            color: s.color,
+                            padding: "6px 10px",
+                            borderRadius: 999,
+                            fontWeight: 900,
+                            fontSize: 12,
+                            display: "inline-block",
+                          }}
+                        >
+                          {niceStatus(o.orderStatus)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-                <div>
-                  <span
-                    style={{
-                      background: s.bg,
-                      color: s.color,
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      fontWeight: 900,
-                      fontSize: 12,
-                    }}
-                  >
-                    {niceStatus(o.orderStatus)}
-                  </span>
-                </div>
+                  <div style={{ marginTop: 10, color: "#374151", fontSize: 13 }}>
+                    📍 {o.deliveryCity || "No delivery city"}
+                  </div>
 
-                <div>{o.deliveryCity || "-"}</div>
+                  <div style={{ marginTop: 6, color: "#374151", fontSize: 13 }}>
+                    📅 {o.createdAt ? String(o.createdAt).slice(0, 10) : "-"}
+                  </div>
 
-                <div style={{ fontWeight: 700 }}>
-                  {o.createdAt ? String(o.createdAt).slice(0, 10) : "-"}
+                  <div className="actions-row" style={{ display: "flex", gap: 10, marginTop: 12 }}>
+                    <button onClick={() => openEditModal(o)} style={editBtn}>
+                      ✏️ Edit
+                    </button>
+                  </div>
                 </div>
-
-                <div>
-                  <button onClick={() => openEditModal(o)} style={editBtn}>
-                    ✏️ Edit
-                  </button>
-                </div>
-              </div>
+              </React.Fragment>
             );
           })}
 
@@ -555,6 +657,7 @@ export default function Orders() {
             {/* Customer */}
             <div style={{ fontWeight: 900, marginBottom: 8 }}>Customer</div>
             <div
+              className="responsive-grid-2"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
@@ -591,7 +694,7 @@ export default function Orders() {
               />
             </div>
 
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 12, marginTop: 12 }}>
               <label style={{ fontWeight: 800, fontSize: 13, color: "#374151" }}>
                 Order Type
               </label>
@@ -615,39 +718,39 @@ export default function Orders() {
                 <option value="COUNTER">COUNTER (Walk-in)</option>
                 <option value="ONLINE">ONLINE (Delivery)</option>
               </select>
-              </div>
-
-              {orderForm.orderType === "ONLINE" && (
-  <>
-            <div style={{ fontWeight: 900, marginTop: 14, marginBottom: 8 }}>
-              Delivery
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-              }}
-            >
-              <input
-                name="deliveryCity"
-                value={orderForm.deliveryCity}
-                onChange={handleOrderChange}
-                placeholder="Delivery City"
-                style={inputStyle}
-              />
-              <input
-                name="deliveryNotes"
-                value={orderForm.deliveryNotes}
-                onChange={handleOrderChange}
-                placeholder="Delivery Notes"
-                style={inputStyle}
-              />
-            </div>
-          </>
-        )}
+            {orderForm.orderType === "ONLINE" && (
+              <>
+                <div style={{ fontWeight: 900, marginTop: 14, marginBottom: 8 }}>
+                  Delivery
+                </div>
 
+                <div
+                  className="responsive-grid-2"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
+                  }}
+                >
+                  <input
+                    name="deliveryCity"
+                    value={orderForm.deliveryCity}
+                    onChange={handleOrderChange}
+                    placeholder="Delivery City"
+                    style={inputStyle}
+                  />
+                  <input
+                    name="deliveryNotes"
+                    value={orderForm.deliveryNotes}
+                    onChange={handleOrderChange}
+                    placeholder="Delivery Notes"
+                    style={inputStyle}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Items */}
             <div style={{ fontWeight: 900, marginTop: 14, marginBottom: 8 }}>
@@ -655,6 +758,7 @@ export default function Orders() {
             </div>
 
             <div
+              className="responsive-grid-3"
               style={{
                 display: "grid",
                 gridTemplateColumns: "2fr 1fr 1fr",
@@ -704,32 +808,24 @@ export default function Orders() {
                       borderRadius: 12,
                       marginBottom: 8,
                       background: "#f9fafb",
+                      gap: 10,
                     }}
                   >
-                    <div>
-                      <div style={{ fontWeight: 900 }}>{i.productName}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 900, wordBreak: "break-word" }}>
+                        {i.productName}
+                      </div>
                       <div style={{ color: "#6b7280", fontSize: 13 }}>
                         {i.quantity} × {formatMoney(i.sellingPrice)}
                       </div>
                     </div>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 10,
-                        alignItems: "center",
-                      }}
-                    >
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                       <div style={{ fontWeight: 900 }}>
-                        {formatMoney(
-                          Number(i.sellingPrice) * Number(i.quantity)
-                        )}
+                        {formatMoney(Number(i.sellingPrice) * Number(i.quantity))}
                       </div>
 
-                      <button
-                        onClick={() => removeCartItem(i.productId)}
-                        style={removeBtn}
-                      >
+                      <button onClick={() => removeCartItem(i.productId)} style={removeBtn}>
                         ✖
                       </button>
                     </div>
@@ -751,13 +847,7 @@ export default function Orders() {
             )}
 
             {/* Footer */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 16,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
               <button onClick={handleCreateOrder} style={createBtn}>
                 {loading ? "Saving..." : "Create Order"}
               </button>

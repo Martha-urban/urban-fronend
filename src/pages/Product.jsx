@@ -41,6 +41,7 @@ export default function Products() {
   // Load categories once (for select dropdown)
   useEffect(() => {
     loadCategories();
+    // eslint-disable-next-line
   }, []);
 
   async function loadProducts() {
@@ -257,6 +258,7 @@ export default function Products() {
 
       {/* Toolbar */}
       <div
+        className="prod-toolbar"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -267,6 +269,7 @@ export default function Products() {
       >
         {/* Search */}
         <div
+          className="prod-search"
           style={{
             display: "flex",
             alignItems: "center",
@@ -315,7 +318,7 @@ export default function Products() {
         <div style={{ marginBottom: 10, color: "crimson" }}>{error}</div>
       )}
 
-      {/* Products table */}
+      {/* Products */}
       <div
         style={{
           background: "#fff",
@@ -324,8 +327,9 @@ export default function Products() {
           overflow: "hidden",
         }}
       >
-        {/* Table headings */}
+        {/* Desktop headings */}
         <div
+          className="prod-desktop-header"
           style={{
             display: "grid",
             gridTemplateColumns: "1.6fr 1.2fr 1.2fr 1.2fr 1.3fr 1fr",
@@ -347,47 +351,96 @@ export default function Products() {
 
         {/* Rows */}
         {filtered.map((p, idx) => (
-          <div
-            key={p.id}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1.6fr 1.2fr 1.2fr 1.2fr 1.3fr 1fr",
-              gap: 10,
-              padding: "14px 16px",
-              borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
-              alignItems: "center",
-              fontSize: 14,
-            }}
-          >
-            <div style={{ fontWeight: 900 }}>{p.name}</div>
-            <div style={{ fontWeight: 700 }}>{p.sku}</div>
-            <div style={{ fontWeight: 800 }}>{money(p.sellingPrice)}</div>
-            <div style={{ fontWeight: 800 }}>{money(p.costPrice)}</div>
-            <div style={{ fontWeight: 700 }}>{getCategoryName(p)}</div>
+          <React.Fragment key={p.id}>
+            {/* Desktop row */}
+            <div
+              className="prod-desktop-row"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1.6fr 1.2fr 1.2fr 1.2fr 1.3fr 1fr",
+                gap: 10,
+                padding: "14px 16px",
+                borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
+                alignItems: "center",
+                fontSize: 14,
+              }}
+            >
+              <div style={{ fontWeight: 900 }}>{p.name}</div>
+              <div style={{ fontWeight: 700 }}>{p.sku}</div>
+              <div style={{ fontWeight: 800 }}>{money(p.sellingPrice)}</div>
+              <div style={{ fontWeight: 800 }}>{money(p.costPrice)}</div>
+              <div style={{ fontWeight: 700 }}>{getCategoryName(p)}</div>
 
-            <div style={{ display: "flex", gap: 8, whiteSpace: "nowrap" }}>
-              <button onClick={() => openEditModal(p)} style={actionBtn}>
-                ✏️ Edit
-              </button>
+              <div style={{ display: "flex", gap: 8, whiteSpace: "nowrap" }}>
+                <button onClick={() => openEditModal(p)} style={actionBtn}>
+                  ✏️ Edit
+                </button>
 
-              <button
-                onClick={() => handleDeleteProduct(p.id)}
-                style={{
-                  ...actionBtn,
-                  background: "#fee2e2",
-                  color: "#991b1b",
-                }}
-              >
-                🗑 Delete
-              </button>
+                <button
+                  onClick={() => handleDeleteProduct(p.id)}
+                  style={{
+                    ...actionBtn,
+                    background: "#fee2e2",
+                    color: "#991b1b",
+                  }}
+                >
+                  🗑 Delete
+                </button>
+              </div>
             </div>
-          </div>
+
+            {/* Mobile card */}
+            <div className="prod-mobile-card">
+              <div className="prod-mobile-top">
+                <div className="prod-mobile-name">{p.name}</div>
+                <div className="prod-mobile-sku">{p.sku}</div>
+              </div>
+
+              <div className="prod-mobile-grid">
+                <div className="prod-mobile-field">
+                  <div className="prod-mobile-label">Selling</div>
+                  <div className="prod-mobile-value" style={{ fontWeight: 900 }}>
+                    {money(p.sellingPrice)}
+                  </div>
+                </div>
+
+                <div className="prod-mobile-field">
+                  <div className="prod-mobile-label">Cost</div>
+                  <div className="prod-mobile-value" style={{ fontWeight: 900 }}>
+                    {money(p.costPrice)}
+                  </div>
+                </div>
+
+                <div className="prod-mobile-field">
+                  <div className="prod-mobile-label">Category</div>
+                  <div className="prod-mobile-value" style={{ fontWeight: 800 }}>
+                    {getCategoryName(p)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="prod-mobile-actions">
+                <button onClick={() => openEditModal(p)} style={actionBtn}>
+                  ✏️ Edit
+                </button>
+
+                <button
+                  onClick={() => handleDeleteProduct(p.id)}
+                  style={{
+                    ...actionBtn,
+                    background: "#fee2e2",
+                    color: "#991b1b",
+                  }}
+                >
+                  🗑 Delete
+                </button>
+              </div>
+            </div>
+          </React.Fragment>
         ))}
 
         {filtered.length === 0 && (
-          <div style={{ padding: 16, color: "#6b7280" }}>
-            No products found.
-          </div>
+          <div style={{ padding: 16, color: "#6b7280" }}>No products found.</div>
         )}
 
         {/* Footer pagination */}
@@ -496,6 +549,7 @@ export default function Products() {
                 justifyContent: "flex-end",
                 gap: 10,
                 marginTop: 16,
+                flexWrap: "wrap",
               }}
             >
               <button onClick={closeAddModal} style={cancelBtn}>
@@ -572,6 +626,7 @@ export default function Products() {
                 justifyContent: "flex-end",
                 gap: 10,
                 marginTop: 16,
+                flexWrap: "wrap",
               }}
             >
               <button onClick={closeEditModal} style={cancelBtn}>
@@ -585,6 +640,82 @@ export default function Products() {
           </div>
         </div>
       )}
+
+      {/* ✅ Responsive styles */}
+      <style>{`
+        /* Mobile cards hidden on desktop */
+        .prod-mobile-card { display: none; }
+
+        @media (max-width: 768px) {
+          .prod-search { min-width: 100% !important; }
+
+          /* Hide desktop table */
+          .prod-desktop-header,
+          .prod-desktop-row {
+            display: none !important;
+          }
+
+          /* Show mobile cards */
+          .prod-mobile-card {
+            display: block;
+            padding: 14px 16px;
+            border-top: 1px solid #f3f4f6;
+            background: #fff;
+          }
+
+          .prod-mobile-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: baseline;
+            margin-bottom: 10px;
+          }
+
+          .prod-mobile-name {
+            font-weight: 900;
+            font-size: 16px;
+            color: #111827;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 70%;
+          }
+
+          .prod-mobile-sku {
+            font-weight: 800;
+            color: #374151;
+            white-space: nowrap;
+          }
+
+          .prod-mobile-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+          }
+
+          .prod-mobile-field {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+          }
+
+          .prod-mobile-label {
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 800;
+          }
+
+          .prod-mobile-value { text-align: right; }
+
+          .prod-mobile-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -615,6 +746,7 @@ const modalOverlay = {
   display: "grid",
   placeItems: "center",
   zIndex: 999,
+  padding: 14,
 };
 
 const modalBox = {

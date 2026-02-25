@@ -20,6 +20,7 @@ export default function Payments() {
 
   useEffect(() => {
     loadPayments();
+    // eslint-disable-next-line
   }, [page]);
 
   async function loadPayments() {
@@ -59,9 +60,10 @@ export default function Payments() {
         date: formatDate(p.paymentDate || p.createdAt),
       };
     });
+    // eslint-disable-next-line
   }, [payments]);
 
-  // Your filtering logic stays same
+  // filtering logic stays same
   const filtered = normalized.filter((p) => {
     const matchesSearch =
       p.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -95,22 +97,18 @@ export default function Payments() {
     return map[method] || { bg: "#f3f4f6", color: "#374151" };
   }
 
-  // ---- MAPPERS (no UI changes, just data conversion) ----
+  // ---- MAPPERS ----
+  function mapMethod(method) {
+    if (!method) return "Cash";
+    if (method === "MPESA") return "M-Pesa";
+    if (method === "CASH") return "Cash";
+    if (method === "BANK") return "Bank";
+    return String(method);
+  }
 
-    function mapMethod(method) {
-      if (!method) return "Cash";
-
-      if (method === "MPESA") return "M-Pesa";
-      if (method === "CASH") return "Cash";
-      if (method === "BANK") return "Bank";
-
-      return String(method);
-    }
-  
   function mapStatus(status) {
     if (!status) return "Pending";
 
-    // Typical mapping
     if (status === "SUCCESS" || status === "PAID" || status === "COMPLETED")
       return "Paid";
 
@@ -132,11 +130,14 @@ export default function Payments() {
     <div style={{ padding: 18 }}>
       {/* Header */}
       <div
+        className="pay-header"
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: 12,
+          flexWrap: "wrap",
+          gap: 10,
         }}
       >
         <h2 style={{ margin: 0, fontSize: 22 }}>Payments</h2>
@@ -169,6 +170,7 @@ export default function Payments() {
 
       {/* Filters row */}
       <div
+        className="pay-filters"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -180,6 +182,7 @@ export default function Payments() {
         {/* Left date filter */}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <div
+            className="pay-datebox"
             style={{
               display: "flex",
               alignItems: "center",
@@ -188,6 +191,7 @@ export default function Payments() {
               border: "1px solid #e5e7eb",
               padding: 10,
               borderRadius: 12,
+              flexWrap: "wrap",
             }}
           >
             <label style={{ fontSize: 14, color: "#6b7280" }}>From:</label>
@@ -235,7 +239,10 @@ export default function Payments() {
         </div>
 
         {/* Right controls */}
-        <div style={{ display: "flex", gap: 10 }}>
+        <div
+          className="pay-right"
+          style={{ display: "flex", gap: 10, flexWrap: "wrap" }}
+        >
           <button
             style={{
               background: "#fff",
@@ -267,6 +274,7 @@ export default function Payments() {
 
       {/* Tabs + Search */}
       <div
+        className="pay-tabs"
         style={{
           display: "flex",
           gap: 10,
@@ -303,6 +311,7 @@ export default function Payments() {
         <div style={{ flex: 1 }} />
 
         <div
+          className="pay-search"
           style={{
             display: "flex",
             alignItems: "center",
@@ -329,7 +338,7 @@ export default function Payments() {
         </div>
       </div>
 
-      {/* Payments Table */}
+      {/* Payments */}
       <div
         style={{
           background: "#fff",
@@ -338,8 +347,9 @@ export default function Payments() {
           overflow: "hidden",
         }}
       >
-        {/* Header */}
+        {/* ✅ Desktop table header */}
         <div
+          className="pay-desktop-header"
           style={{
             display: "grid",
             gridTemplateColumns: "1.1fr 1.6fr 1.1fr 1.2fr 1.2fr 1.2fr",
@@ -371,59 +381,119 @@ export default function Payments() {
             const m = methodBadge(p.method);
 
             return (
-              <div
-                key={p.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.1fr 1.6fr 1.1fr 1.2fr 1.2fr 1.2fr",
-                  gap: 10,
-                  padding: "14px 16px",
-                  borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
-                  alignItems: "center",
-                  fontSize: 14,
-                }}
-              >
-                <div style={{ fontWeight: 900 }}>{p.id}</div>
+              <React.Fragment key={p.id}>
+                {/* ✅ Desktop row */}
+                <div
+                  className="pay-desktop-row"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1.1fr 1.6fr 1.1fr 1.2fr 1.2fr 1.2fr",
+                    gap: 10,
+                    padding: "14px 16px",
+                    borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
+                    alignItems: "center",
+                    fontSize: 14,
+                  }}
+                >
+                  <div style={{ fontWeight: 900 }}>{p.id}</div>
 
-                <div style={{ fontWeight: 600, color: "#374151" }}>
-                  {p.customer}
+                  <div style={{ fontWeight: 600, color: "#374151" }}>
+                    {p.customer}
+                  </div>
+
+                  <div>
+                    <span
+                      style={{
+                        background: m.bg,
+                        color: m.color,
+                        padding: "6px 10px",
+                        borderRadius: 10,
+                        fontWeight: 900,
+                        fontSize: 13,
+                        display: "inline-block",
+                      }}
+                    >
+                      {p.method}
+                    </span>
+                  </div>
+
+                  <div style={{ fontWeight: 800 }}>{money(p.amount)}</div>
+
+                  <div>
+                    <span
+                      style={{
+                        background: s.bg,
+                        color: s.color,
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        fontWeight: 900,
+                        fontSize: 13,
+                      }}
+                    >
+                      {p.status}
+                    </span>
+                  </div>
+
+                  <div style={{ fontWeight: 700 }}>{p.date}</div>
                 </div>
 
-                <div>
-                  <span
-                    style={{
-                      background: m.bg,
-                      color: m.color,
-                      padding: "6px 10px",
-                      borderRadius: 10,
-                      fontWeight: 900,
-                      fontSize: 13,
-                      display: "inline-block",
-                    }}
-                  >
-                    {p.method}
-                  </span>
+                {/* ✅ Mobile card (form-like) */}
+                <div className="pay-mobile-card">
+                  <div className="pay-mobile-top">
+                    <div className="pay-mobile-id">{p.id}</div>
+                    <div className="pay-mobile-date">{p.date}</div>
+                  </div>
+
+                  <div className="pay-mobile-customer">{p.customer}</div>
+
+                  <div className="pay-mobile-grid">
+                    <div className="pay-mobile-field">
+                      <div className="pay-mobile-label">Method</div>
+                      <div className="pay-mobile-value">
+                        <span
+                          style={{
+                            background: m.bg,
+                            color: m.color,
+                            padding: "6px 10px",
+                            borderRadius: 10,
+                            fontWeight: 900,
+                            fontSize: 13,
+                            display: "inline-block",
+                          }}
+                        >
+                          {p.method}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pay-mobile-field">
+                      <div className="pay-mobile-label">Amount</div>
+                      <div className="pay-mobile-value" style={{ fontWeight: 900 }}>
+                        {money(p.amount)}
+                      </div>
+                    </div>
+
+                    <div className="pay-mobile-field">
+                      <div className="pay-mobile-label">Status</div>
+                      <div className="pay-mobile-value">
+                        <span
+                          style={{
+                            background: s.bg,
+                            color: s.color,
+                            padding: "6px 10px",
+                            borderRadius: 999,
+                            fontWeight: 900,
+                            fontSize: 13,
+                            display: "inline-block",
+                          }}
+                        >
+                          {p.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                <div style={{ fontWeight: 800 }}>{money(p.amount)}</div>
-
-                <div>
-                  <span
-                    style={{
-                      background: s.bg,
-                      color: s.color,
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      fontWeight: 900,
-                      fontSize: 13,
-                    }}
-                  >
-                    {p.status}
-                  </span>
-                </div>
-
-                <div style={{ fontWeight: 700 }}>{p.date}</div>
-              </div>
+              </React.Fragment>
             );
           })}
 
@@ -472,11 +542,94 @@ export default function Payments() {
 
         {/* Empty */}
         {!loading && !error && pageData && payments.length === 0 && (
-          <div style={{ padding: 16, color: "#6b7280" }}>
-            No payments found.
-          </div>
+          <div style={{ padding: 16, color: "#6b7280" }}>No payments found.</div>
         )}
       </div>
+
+      {/* ✅ responsiveness styles */}
+      <style>{`
+        /* MOBILE CARD HIDDEN BY DEFAULT */
+        .pay-mobile-card { display: none; }
+
+        @media (max-width: 768px) {
+          .pay-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 12px;
+          }
+
+          .pay-search {
+            min-width: 100% !important;
+          }
+
+          /* Hide desktop table on mobile */
+          .pay-desktop-header,
+          .pay-desktop-row {
+            display: none !important;
+          }
+
+          /* Show mobile cards */
+          .pay-mobile-card {
+            display: block;
+            padding: 14px 16px;
+            border-top: 1px solid #f3f4f6;
+            background: #fff;
+          }
+
+          .pay-mobile-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+          }
+
+          .pay-mobile-id {
+            font-weight: 900;
+            font-size: 16px;
+            color: #111827;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 70%;
+          }
+
+          .pay-mobile-date {
+            font-weight: 800;
+            color: #111827;
+            white-space: nowrap;
+          }
+
+          .pay-mobile-customer {
+            color: #374151;
+            font-weight: 700;
+            margin-bottom: 12px;
+          }
+
+          .pay-mobile-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+
+          .pay-mobile-field {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+          }
+
+          .pay-mobile-label {
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 800;
+          }
+
+          .pay-mobile-value {
+            text-align: right;
+          }
+        }
+      `}</style>
     </div>
   );
 }
