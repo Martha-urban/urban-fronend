@@ -574,7 +574,9 @@ export default function Orders() {
                   </div>
 
                   <div style={{ marginTop: 6, color: "#374151", fontSize: 13 }}>
-                    📅 {o.createdAt ? String(o.createdAt).slice(0, 10) : "-"}
+                    📅 {o.createdAt
+                        ? o.createdAt.replace("T", " ").slice(0, 16)
+                        : "-"}
                   </div>
 
                   <div className="actions-row" style={{ display: "flex", gap: 10, marginTop: 12 }}>
@@ -925,6 +927,18 @@ export default function Orders() {
     </div>
   );
 }
+
+const formatDateTime = (dateString) => {
+  if (!dateString) return "-";
+
+  const date = new Date(dateString);
+
+  return `${date.toLocaleDateString("en-CA")} ${date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })}`;
+};
 
 /* --------------------------
    Styles (same theme)

@@ -37,6 +37,10 @@ export default function Sidebar({ onClose, mobile = false }) {
           Dashboard
         </NavLink>
 
+         <NavLink to="/crm" className={linkClass} onClick={onClose}>
+          crm
+        </NavLink>
+
         <NavLink to="/orders" className={linkClass} onClick={onClose}>
           Orders
         </NavLink>

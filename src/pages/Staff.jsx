@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api/api"; // adjust if needed
 
 export default function Staff() {
+  const navigate = useNavigate();
+
   const [search, setSearch] = useState("");
 
   // Backend state
@@ -21,7 +24,6 @@ export default function Staff() {
 
   // Modal states
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState(null);
 
   // Add staff form state
   const [form, setForm] = useState({
@@ -166,55 +168,6 @@ export default function Staff() {
     }
   }
 
-  function openEditModal(staff) {
-    setEditingStaff({
-      ...staff,
-      fullName: `${staff.firstName || ""} ${staff.lastName || ""}`.trim(),
-      phone: staff.phoneNumber || "",
-    });
-  }
-
-  function closeEditModal() {
-    setEditingStaff(null);
-  }
-
-  function handleEditChange(e) {
-    setEditingStaff({ ...editingStaff, [e.target.name]: e.target.value });
-  }
-
-  async function handleSaveEdit() {
-    if (!editingStaff.fullName || !editingStaff.phone || !editingStaff.email) {
-      alert("Please fill full name, email and phone.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError("");
-
-      const { firstName, lastName } = splitName(editingStaff.fullName);
-
-      const payload = {
-        firstName,
-        lastName,
-        email: editingStaff.email,
-        phoneNumber: editingStaff.phone,
-        role: editingStaff.role,
-      };
-
-      await api.put(`/api/v1/staff/${editingStaff.id}`, payload);
-
-      closeEditModal();
-      await loadStaff();
-    } catch (e) {
-      console.log(e);
-      setError("Update failed. Backend endpoint may not exist yet.");
-      alert("Update failed. Backend endpoint may not exist yet.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function statusStyle(status) {
     if (status === "Active") return { color: "#166534", bg: "#dcfce7" };
     return { color: "#9f1239", bg: "#ffe4e6" };
@@ -307,7 +260,7 @@ export default function Staff() {
           overflow: "hidden",
         }}
       >
-        {/* Table headings (REDESIGNED AFTER REMOVING EMAIL) */}
+        {/* Table headings */}
         <div
           style={{
             display: "grid",
@@ -335,6 +288,7 @@ export default function Staff() {
           return (
             <div
               key={s.id}
+              onClick={() => navigate(`/staff/${s.id}`)}
               style={{
                 display: "grid",
                 gridTemplateColumns: "1.6fr 1.3fr 1fr 1fr 1.2fr",
@@ -343,6 +297,14 @@ export default function Staff() {
                 borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
                 alignItems: "center",
                 fontSize: 14,
+                cursor: "pointer",
+                transition: "background 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f9fafb";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#fff";
               }}
             >
               <div style={{ fontWeight: 800 }}>{fullName || "-"}</div>
@@ -367,12 +329,21 @@ export default function Staff() {
               </div>
 
               <div style={{ display: "flex", gap: 8, whiteSpace: "nowrap" }}>
-                <button onClick={() => openEditModal(s)} style={actionBtn}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/staff/${s.id}`);
+                  }}
+                  style={actionBtn}
+                >
                   ✏️ Edit
                 </button>
 
                 <button
-                  onClick={() => handleDeleteStaff(s.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteStaff(s.id);
+                  }}
                   style={{
                     ...actionBtn,
                     background: "#fee2e2",
@@ -387,9 +358,7 @@ export default function Staff() {
         })}
 
         {filteredStaff.length === 0 && (
-          <div style={{ padding: 16, color: "#6b7280" }}>
-            No staff found.
-          </div>
+          <div style={{ padding: 16, color: "#6b7280" }}>No staff found.</div>
         )}
 
         {/* Footer pagination */}
@@ -509,77 +478,12 @@ export default function Staff() {
           </div>
         </div>
       )}
-
-      {/* EDIT MODAL */}
-      {editingStaff && (
-        <div style={modalOverlay}>
-          <div style={modalBox}>
-            <h3 style={{ marginTop: 0 }}>Edit Staff</h3>
-
-            <div style={{ display: "grid", gap: 12 }}>
-              <input
-                name="fullName"
-                value={editingStaff.fullName}
-                onChange={handleEditChange}
-                placeholder="Full Name"
-                style={inputStyle}
-              />
-
-              <input
-                name="email"
-                value={editingStaff.email}
-                onChange={handleEditChange}
-                placeholder="Email"
-                style={inputStyle}
-              />
-
-              <input
-                name="phone"
-                value={editingStaff.phone}
-                onChange={handleEditChange}
-                placeholder="Phone"
-                style={inputStyle}
-              />
-
-              <select
-                name="role"
-                value={editingStaff.role}
-                onChange={handleEditChange}
-                style={inputStyle}
-              >
-                {roles.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 10,
-                marginTop: 16,
-              }}
-            >
-              <button onClick={closeEditModal} style={cancelBtn}>
-                Cancel
-              </button>
-
-              <button onClick={handleSaveEdit} style={saveBtn}>
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 /* --------------------------
-   Styles (UNCHANGED)
+   Styles
 -------------------------- */
 
 const inputStyle = {

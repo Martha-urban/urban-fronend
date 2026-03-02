@@ -152,12 +152,12 @@ export default function Dashboard() {
       {error && <div className="mb-3 text-red-600">{error}</div>}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-4">
-        <StatCard title="Revenue" value={money(revenue)} tone="green" />
-        <StatCard title="Orders" value={ordersCount} tone="blue" />
-        <StatCard title="Gross Profit" value={money(grossProfit)} tone="orange" />
-        <StatCard title="COGS" value={money(cogs)} tone="red" />
-        <StatCard title="Expenses" value={money(expenses)} tone="black" />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <BigCard title="Revenue" value={money(revenue)} green />
+        <BigCard title="Orders" value={ordersCount} blue />
+        <BigCard title="Gross Profit" value={money(grossProfit)} orange />
+        <BigCard title="COGS" value={money(cogs)} red />
+        <BigCard title="Expenses" value={money(expenses)} />
       </div>
 
       {/* Main grid */}
@@ -265,6 +265,45 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+function BigCard({ title, value, green, blue, orange, red, purple }) {
+  let color = "text-slate-900";
+  let accent = "bg-slate-200";
+
+  if (green) {
+    color = "text-green-600";
+    accent = "bg-green-500";
+  }
+  if (blue) {
+    color = "text-blue-600";
+    accent = "bg-blue-500";
+  }
+  if (orange) {
+    color = "text-orange-600";
+    accent = "bg-orange-500";
+  }
+  if (red) {
+    color = "text-red-600";
+    accent = "bg-red-500";
+  }
+  if (purple) {
+    color = "text-purple-600";
+    accent = "bg-purple-500";
+  }
+
+  return (
+    <div className="relative bg-white rounded-2xl p-5 shadow-sm border border-slate-200 hover:shadow-md transition duration-300">
+
+      {/* Accent line */}
+      <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-2xl ${accent}`} />
+
+      <p className="text-sm text-slate-500">{title}</p>
+
+      <h3 className={`text-2xl md:text-3xl font-bold mt-2 ${color}`}>
+        {value}
+      </h3>
     </div>
   );
 }

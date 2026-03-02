@@ -12,6 +12,8 @@ import Login from "./pages/Login";
 import Category from "./pages/Category";
 import Product from "./pages/Product";
 import Expenses from "./pages/Expense";
+import StaffDetails from "./pages/StaffDetails";
+import CRM from "./pages/crm";
 
 function PrivateRoute({ children }) {
 const token = localStorage.getItem("urban_access_token");
@@ -35,6 +37,7 @@ export default function App() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="crm" element={<CRM />} />
         <Route path="orders" element={<Orders />} />
         <Route path="categories" element={<Category />} />
         <Route path="products" element={<Product />} /> 
@@ -42,6 +45,8 @@ export default function App() {
         <Route path="expenses" element={<Expenses/>} />
         <Route path="inventory" element={<Inventory />} />
         <Route path="staff" element={<Staff />} />
+        <Route path="/staff/:id" element={<StaffDetails />} />
+        <Route path="staff-details" element={<StaffDetails />} />
         <Route path="staff-logs" element={<StaffLogs />} />
       </Route>
 
