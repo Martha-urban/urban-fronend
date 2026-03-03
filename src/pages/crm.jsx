@@ -9,6 +9,11 @@ export default function CRM() {
   const [page, setPage] = useState(0);
   const [error, setError] = useState("");
 
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [deliveryCity, setDeliveryCity] = useState("");
+  const [converting, setConverting] = useState(false);
+
   const size = 10;
 
   useEffect(() => {
@@ -38,15 +43,34 @@ export default function CRM() {
     }
   };
 
-  const convertLead = async (id) => {
+  const openConvertModal = (lead) => {
+    setSelectedLead(lead);
+    setQuantity(1);
+    setDeliveryCity(lead.location || "");
+  };
+
+  const convertLead = async () => {
     try {
-      await api.post(`/api/v1/leads/${id}/convert`);
+      setConverting(true);
+
+      await api.post(`/api/v1/leads/${selectedLead.id}/convert`, {
+        quantity: Number(quantity),
+        deliveryCity,
+      });
+
+      setSelectedLead(null);
       fetchLeads();
     } catch (err) {
       console.error("Conversion failed", err);
       alert("Conversion failed");
+    } finally {
+      setConverting(false);
     }
   };
+
+  const productPrice = selectedLead?.product?.sellingPrice || 0;
+  const safeQuantity = Number(quantity) > 0 ? Number(quantity) : 1;
+  const totalAmount = safeQuantity * Number(productPrice);
 
   const totalLeads = pageData?.totalElements || 0;
   const newLeads = leads.filter(l => l.status === "NEW").length;
@@ -90,7 +114,6 @@ export default function CRM() {
         </div>
       )}
 
-
       {/* Desktop Table */}
       <div className="hidden md:block bg-white rounded shadow overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -116,12 +139,12 @@ export default function CRM() {
                   <StatusBadge status={lead.status} />
                 </td>
                 <td className="p-3">
-                {formatDateTime(lead.created)}
+                  {formatDateTime(lead.created)}
                 </td>
                 <td className="p-3">
                   {lead.status !== "CONVERTED" && (
                     <button
-                      onClick={() => convertLead(lead.id)}
+                      onClick={() => openConvertModal(lead)}
                       className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
                     >
                       Convert
@@ -137,27 +160,16 @@ export default function CRM() {
       {/* Mobile Cards */}
       <div className="md:hidden space-y-4">
         {leads.map((lead) => (
-          <div
-            key={lead.id}
-            className="bg-white rounded shadow p-4 space-y-2"
-          >
-            <div className="font-semibold text-base">
-              {lead.name}
-            </div>
-            <div className="text-sm text-gray-600">
-              📞 {lead.phoneNumber}
-            </div>
-            <div className="text-sm text-gray-600">
-              🛍 {lead.formName}
-            </div>
-            <div className="text-sm text-gray-600">
-              📍 {lead.location}
-            </div>
+          <div key={lead.id} className="bg-white rounded shadow p-4 space-y-2">
+            <div className="font-semibold">{lead.name}</div>
+            <div className="text-sm text-gray-600">📞 {lead.phoneNumber}</div>
+            <div className="text-sm text-gray-600">🛍 {lead.formName}</div>
+            <div className="text-sm text-gray-600">📍 {lead.location}</div>
             <StatusBadge status={lead.status} />
 
             {lead.status !== "CONVERTED" && (
               <button
-                onClick={() => convertLead(lead.id)}
+                onClick={() => openConvertModal(lead)}
                 className="w-full mt-2 bg-green-600 text-white py-2 rounded hover:bg-green-700"
               >
                 Convert
@@ -197,9 +209,88 @@ export default function CRM() {
           Loading...
         </div>
       )}
+
+      {/* 🔥 Convert Modal */}
+      {selectedLead && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h2 className="text-lg font-bold mb-4">
+              Convert Lead
+            </h2>
+
+            <div className="space-y-4">
+
+              <div>
+                <label className="text-sm text-gray-600">Customer</label>
+                <div className="font-semibold">{selectedLead.name}</div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Product</label>
+                <div>{selectedLead.formName}</div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="w-full border rounded p-2 mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Price Per Unit</label>
+                <div className="font-semibold">
+                  KES {Number(productPrice).toLocaleString()}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Total</label>
+                <div className="text-lg font-bold text-green-600">
+                  KES {totalAmount.toLocaleString()}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Delivery Location</label>
+                <input
+                  type="text"
+                  value={deliveryCity}
+                  onChange={(e) => setDeliveryCity(e.target.value)}
+                  className="w-full border rounded p-2 mt-1"
+                />
+              </div>
+
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="px-4 py-2 border rounded"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={convertLead}
+                disabled={converting}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+              >
+                {converting ? "Converting..." : "Confirm Convert"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+/* Components */
 
 function StatCard({ title, value }) {
   return (
@@ -218,9 +309,7 @@ function StatusBadge({ status }) {
   };
 
   return (
-    <span
-      className={`px-2 py-1 rounded text-xs font-medium ${colors[status] || "bg-gray-100 text-gray-600"}`}
-    >
+    <span className={`px-2 py-1 rounded text-xs font-medium ${colors[status] || "bg-gray-100 text-gray-600"}`}>
       {status}
     </span>
   );
@@ -228,14 +317,11 @@ function StatusBadge({ status }) {
 
 const formatDateTime = (dateString) => {
   if (!dateString) return "";
-
   const date = new Date(dateString);
-
-  const formattedDate = date.toLocaleDateString("en-CA"); // YYYY-MM-DD
+  const formattedDate = date.toLocaleDateString("en-CA");
   const formattedTime = date.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
-
   return `${formattedDate} ${formattedTime}`;
 };
