@@ -76,6 +76,8 @@ export default function CRM() {
   const newLeads = leads.filter(l => l.status === "NEW").length;
   const convertedLeads = leads.filter(l => l.status === "CONVERTED").length;
   const contactedLeads = leads.filter(l => l.status === "CONTACTED").length;
+  const cancelledLeads = leads.filter(l => l.status === "CANCELLED").length;
+  const rescheduledLeads = leads.filter(l => l.status === "RESCHEDULED").length;
 
   return (
     <div className="p-4 md:p-6">
@@ -89,6 +91,8 @@ export default function CRM() {
         <StatCard title="New" value={newLeads} />
         <StatCard title="Converted" value={convertedLeads} />
         <StatCard title="Contacted" value={contactedLeads} />
+        <StatCard title="Cancelled" value={cancelledLeads} />
+        <StatCard title="Rescheduled" value={rescheduledLeads} />
       </div>
 
       {/* Filter */}
@@ -105,6 +109,8 @@ export default function CRM() {
           <option value="NEW">New</option>
           <option value="CONTACTED">Contacted</option>
           <option value="CONVERTED">Converted</option>
+          <option value="CANCELLED">Cancelled</option>
+          <option value="RESCHEDULED">Rescheduled</option>
         </select>
       </div>
 
