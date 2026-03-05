@@ -18,6 +18,10 @@ export default function Orders() {
   // Products for dropdown
   const [products, setProducts] = useState([]);
 
+  // filter state
+
+  const [statusFilter, setStatusFilter] = useState("");
+
   // Create order modal
   const [isAddOpen, setIsAddOpen] = useState(false);
 
@@ -67,7 +71,7 @@ export default function Orders() {
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line
-  }, [page]);
+  }, [page, statusFilter]);
 
   useEffect(() => {
     loadProducts();
@@ -79,9 +83,14 @@ export default function Orders() {
       setLoading(true);
       setError("");
 
-      const res = await api.get("/api/v1/orders", {
-        params: { page, size, sort: "createdAt,desc" },
-      });
+  const res = await api.get("/api/v1/orders", {
+  params: {
+    page,
+    size,
+    sort: "createdAt,desc",
+    status: statusFilter || undefined,
+  },
+});
 
       setPageData(res.data);
       setOrders(res.data.content || []);
@@ -424,9 +433,46 @@ export default function Orders() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 16, color: "#6b7280" }}>
-        {from} to {to}
-      </div>
+      <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(0);
+              setStatusFilter(e.target.value);
+            }}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #e5e7eb",
+              fontWeight: 700,
+              background: "#fff",
+            }}
+          >
+            <option value="">All Statuses</option>
+
+            {ORDER_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {niceStatus(s)}
+              </option>
+            ))}
+          </select>
+
+          {statusFilter && (
+            <button
+              onClick={() => setStatusFilter("")}
+              style={{
+                border: "1px solid #e5e7eb",
+                background: "#fff",
+                borderRadius: 10,
+                padding: "10px 12px",
+                cursor: "pointer",
+                fontWeight: 800,
+              }}
+            >
+              Clear Filter
+            </button>
+          )}
+        </div>
 
       {/* Orders Table */}
       <div

@@ -12,9 +12,9 @@ export default function Sidebar({ onClose, mobile = false }) {
 
   return (
     <aside
-      className={`w-[260px] h-full bg-slate-800 text-white flex flex-col
-      ${mobile ? "flex" : "hidden lg:flex"}`}
-    >
+    className={`w-[260px] h-screen bg-slate-800 text-white flex flex-col
+    ${mobile ? "flex" : "hidden lg:flex"}`}
+  >
       {/* Brand */}
       <div className="px-6 py-5 font-bold tracking-wide text-lg border-b border-white/10 flex items-center justify-between">
         <span>URBAN TRENDS ✅</span>
@@ -32,12 +32,12 @@ export default function Sidebar({ onClose, mobile = false }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-2">
+      <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
         <NavLink to="/dashboard" className={linkClass} onClick={onClose}>
           Dashboard
         </NavLink>
 
-         <NavLink to="/crm" className={linkClass} onClick={onClose}>
+        <NavLink to="/crm" className={linkClass} onClick={onClose}>
           crm
         </NavLink>
 
@@ -72,6 +72,16 @@ export default function Sidebar({ onClose, mobile = false }) {
         <NavLink to="/staff-logs" className={linkClass} onClick={onClose}>
           Staff Logs
         </NavLink>
+
+        <button
+          onClick={() => {
+            handleLogout();
+            if (onClose) onClose();
+          }}
+          className="block w-full text-left px-4 py-3 rounded-xl transition font-medium text-white/80 hover:bg-white/5"
+        >
+          Log Out
+        </button>
       </nav>
     </aside>
   );
