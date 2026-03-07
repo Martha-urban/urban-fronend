@@ -23,35 +23,38 @@ const token = localStorage.getItem("urban_access_token");
 export default function App() {
   return (
     <Routes>
+
+      {/* Home */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
       {/* Public */}
       <Route path="/login" element={<Login />} />
 
       {/* Protected */}
       <Route
-        path="/"
         element={
           <PrivateRoute>
             <AppLayout />
           </PrivateRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="crm" element={<CRM />} />
-        <Route path="orders" element={<Orders />} />
-        <Route path="categories" element={<Category />} />
-        <Route path="products" element={<Product />} /> 
-        <Route path="payments" element={<Payment />} />
-        <Route path="expenses" element={<Expenses/>} />
-        <Route path="inventory" element={<Inventory />} />
-        <Route path="staff" element={<Staff />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/crm" element={<CRM />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/categories" element={<Category />} />
+        <Route path="/products" element={<Product />} />
+        <Route path="/payments" element={<Payment />} />
+        <Route path="/expenses" element={<Expenses />} />
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/staff" element={<Staff />} />
         <Route path="/staff/:id" element={<StaffDetails />} />
-        <Route path="staff-details" element={<StaffDetails />} />
-        <Route path="staff-logs" element={<StaffLogs />} />
+        <Route path="/staff-details" element={<StaffDetails />} />
+        <Route path="/staff-logs" element={<StaffLogs />} />
       </Route>
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
+
     </Routes>
   );
 }
