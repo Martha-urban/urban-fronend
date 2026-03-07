@@ -15,20 +15,54 @@ import Expenses from "./pages/Expense";
 import StaffDetails from "./pages/StaffDetails";
 import CRM from "./pages/crm";
 
+/* Protect private routes */
 function PrivateRoute({ children }) {
-const token = localStorage.getItem("urban_access_token");
-  return token ? children : <Navigate to="/login" replace />;
+  const token = localStorage.getItem("urban_access_token");
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
+/* Prevent logged-in users from seeing login */
+function PublicRoute({ children }) {
+  const token = localStorage.getItem("urban_access_token");
+
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
 }
 
 export default function App() {
+
+  const token = localStorage.getItem("urban_access_token");
+
   return (
     <Routes>
 
-      {/* Home */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* Root route decides where to go */}
+      <Route
+        path="/"
+        element={
+          token
+            ? <Navigate to="/dashboard" replace />
+            : <Navigate to="/login" replace />
+        }
+      />
 
       {/* Public */}
-      <Route path="/login" element={<Login />} />
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
 
       {/* Protected */}
       <Route
@@ -52,8 +86,8 @@ export default function App() {
         <Route path="/staff-logs" element={<StaffLogs />} />
       </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* Catch everything */}
+      <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
   );
