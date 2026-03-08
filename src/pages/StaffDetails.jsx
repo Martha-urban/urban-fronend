@@ -28,14 +28,14 @@ export default function StaffDetailsPage() {
   const navigate = useNavigate();
 
   const [staff, setStaff] = useState(null);
-  const [summary, setSummary] = useState(null);
+  const [ summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
         const [staffRes, summaryRes] = await Promise.all([
-          api.get(`/api/v1/auth/${id}`),
+          api.get(`/api/v1/auth/user/${id}`),
           api.get(`/api/v1/orders/staff/${id}/summary`)
         ]);
 
