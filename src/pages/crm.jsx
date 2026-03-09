@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { api } from "../api/api";
 
@@ -122,6 +123,7 @@ export default function CRM() {
   const totalAmount = subtotal + Number(deliveryFee);
 
   const totalLeads = pageData?.totalElements || 0;
+
   const newLeads = leads.filter(l => l.status === "NEW").length;
   const convertedLeads = leads.filter(l => l.status === "CONVERTED").length;
   const contactedLeads = leads.filter(l => l.status === "CONTACTED").length;
@@ -151,10 +153,10 @@ export default function CRM() {
 
       {/* Filter */}
 
-      <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+      <div className="mb-4">
 
         <select
-          className="border p-2 rounded w-full sm:w-60"
+          className="border p-2 rounded w-full md:w-60"
           value={statusFilter}
           onChange={(e) => {
             setPage(0);
@@ -179,7 +181,66 @@ export default function CRM() {
         </div>
       )}
 
-      {/* Desktop Table */}
+      {/* MOBILE VIEW */}
+
+      <div className="md:hidden space-y-4">
+
+        {leads.map((lead) => (
+
+          <div key={lead.id} className="bg-white p-4 rounded shadow">
+
+            <div className="font-semibold text-lg">{lead.name}</div>
+
+            <div className="text-sm text-gray-500">
+              {lead.phoneNumber}
+            </div>
+
+            <div className="text-sm mt-2">
+              Product: {lead.formName}
+            </div>
+
+            <div className="text-sm">
+              Location: {lead.location}
+            </div>
+
+            <div className="text-sm">
+              {formatDateTime(lead.created)}
+            </div>
+
+            <div className="mt-2">
+
+              <select
+                value={lead.status}
+                onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
+                className="border rounded px-2 py-1 w-full"
+              >
+                <option value="NEW">NEW</option>
+                <option value="CONTACTED">CONTACTED</option>
+                <option value="RESCHEDULED">RESCHEDULED</option>
+                <option value="CANCELLED">CANCELLED</option>
+                <option value="CONVERTED">CONVERTED</option>
+              </select>
+
+            </div>
+
+            {lead.status !== "CONVERTED" && (
+
+              <button
+                onClick={() => openConvertModal(lead)}
+                className="mt-3 w-full bg-green-600 text-white py-2 rounded"
+              >
+                Convert
+              </button>
+
+            )}
+
+          </div>
+
+        ))}
+
+      </div>
+
+      {/* DESKTOP TABLE */}
 
       <div className="hidden md:block bg-white rounded shadow overflow-x-auto">
 
@@ -257,7 +318,37 @@ export default function CRM() {
 
       </div>
 
-      {/* Convert Modal */}
+      {/* PAGINATION */}
+
+      {pageData && (
+
+        <div className="flex items-center justify-between mt-6">
+
+          <button
+            disabled={page === 0}
+            onClick={() => setPage(page - 1)}
+            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+          >
+            Previous
+          </button>
+
+          <div className="text-sm">
+            Page {page + 1} of {pageData.totalPages}
+          </div>
+
+          <button
+            disabled={page + 1 >= pageData.totalPages}
+            onClick={() => setPage(page + 1)}
+            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+
+        </div>
+
+      )}
+
+      {/* CONVERT MODAL */}
 
       {selectedLead && (
 
@@ -297,16 +388,6 @@ export default function CRM() {
 
               <div>
 
-                <label className="text-sm text-gray-600">Price Per Unit</label>
-
-                <div className="font-semibold">
-                  KES {Number(productPrice).toLocaleString()}
-                </div>
-
-              </div>
-
-              <div>
-
                 <label className="text-sm text-gray-600">Delivery Fee</label>
 
                 <input
@@ -318,16 +399,6 @@ export default function CRM() {
                 />
 
               </div>
-
-              {/* <div>
-
-                <label className="text-sm text-gray-600">Subtotal</label>
-
-                <div className="font-semibold">
-                  KES {subtotal.toLocaleString()}
-                </div>
-
-              </div> */}
 
               <div>
 
@@ -366,7 +437,7 @@ export default function CRM() {
               <button
                 onClick={convertLead}
                 disabled={converting}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                className="px-4 py-2 bg-green-600 text-white rounded"
               >
                 {converting ? "Converting..." : "Confirm Convert"}
               </button>
