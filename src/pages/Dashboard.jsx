@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import StatCard from "../components/StatCard";
 import { api } from "../api/api";
+import { FaBell } from "react-icons/fa";
 import {
   BarChart,
   Bar,
@@ -14,6 +15,7 @@ import {
 export default function Dashboard() {
   const [from, setFrom] = useState("2026-02-01");
   const [to, setTo] = useState("2026-02-28");
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Backend state
   const [loading, setLoading] = useState(false);
@@ -113,12 +115,34 @@ export default function Dashboard() {
   return (
     <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-4">
-        <h2 className="m-0 text-[22px] font-bold text-slate-900">Dashboard</h2>
-        <p className="mt-1 text-slate-500">
-          {from} to {to}
-        </p>
-      </div>
+     <div className="mb-4 flex items-center justify-between relative">
+          <div>
+            <h2 className="m-0 text-[22px] font-bold text-slate-900">Dashboard</h2>
+            <p className="mt-1 text-slate-500">
+              {from} to {to}
+            </p>
+          </div>
+
+          {/* Notification Icon */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
+            >
+              <FaBell className="text-slate-700 text-lg" />
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50">
+                <h4 className="font-bold text-slate-700 mb-2">Notifications</h4>
+
+                <div className="text-sm text-slate-500">
+                  No notifications yet
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
       {/* Filters row */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -180,7 +204,7 @@ export default function Dashboard() {
           {/* Profit Breakdown */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200">
             <h3 className="m-0 mb-3 text-slate-700 font-bold">
-              Profit Breakdown (Demo)
+              Profit Breakdown
             </h3>
 
             <div className="text-slate-500 text-sm mb-3">
