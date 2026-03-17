@@ -1,7 +1,10 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { api } from "../api/api";
 
 export default function Sidebar({ onClose, mobile = false }) {
+  const navigate = useNavigate();
+
   const linkClass = ({ isActive }) =>
     `block px-4 py-3 rounded-xl transition font-medium
      ${
@@ -10,15 +13,27 @@ export default function Sidebar({ onClose, mobile = false }) {
          : "text-white/80 hover:bg-white/5"
      }`;
 
+  const handleLogout = async () => {
+    try {
+      await api.post("/api/v1/auth/logout");
+    } catch (e) {
+      console.log("Logout request failed, continuing anyway");
+    }
+
+    localStorage.removeItem("urban_access_token");
+    localStorage.removeItem("urban_refresh_token");
+
+    navigate("/login");
+  };
+
   return (
     <aside
-    className={`w-[260px] h-screen bg-slate-800 text-white flex flex-col
-    ${mobile ? "flex" : "hidden lg:flex"}`}
-  >
+      className={`w-[260px] h-screen bg-slate-800 text-white flex flex-col
+      ${mobile ? "flex" : "hidden lg:flex"}`}
+    >
       {/* Brand */}
       <div className="px-6 py-5 font-bold tracking-wide text-lg border-b border-white/10 flex items-center justify-between">
         <span>URBAN TRENDS ✅</span>
-
 
         {/* Close button (mobile only) */}
         {mobile && onClose && (
@@ -38,7 +53,7 @@ export default function Sidebar({ onClose, mobile = false }) {
         </NavLink>
 
         <NavLink to="/crm" className={linkClass} onClick={onClose}>
-          crm
+          CRM
         </NavLink>
 
         <NavLink to="/orders" className={linkClass} onClick={onClose}>

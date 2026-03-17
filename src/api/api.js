@@ -14,12 +14,8 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("urban_access_token");
 
-    const isAuthRequest =
-      config.url?.includes("/auth/login") ||
-      config.url?.includes("/auth/register");
-
-    // attach token for protected requests
-    if (token && !isAuthRequest) {
+    // 🔥 ALWAYS attach token if it exists
+    if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
