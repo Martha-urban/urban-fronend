@@ -30,15 +30,15 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
 
-    // if token expired or unauthorized
-    if (status === 401 || status === 403) {
-      console.warn("Session expired. Redirecting to login.");
+    // // if token expired or unauthorized
+    // if (status === 401 || status === 403) {
+    //   console.warn("Session expired. Redirecting to login.");
 
-      localStorage.removeItem("urban_access_token");
-      localStorage.removeItem("urban_refresh_token");
+    //   localStorage.removeItem("urban_access_token");
+    //   localStorage.removeItem("urban_refresh_token");
 
-      window.location.href = "/login";
-    }
+    //   window.location.href = "/login";
+    // }
 
     return Promise.reject(error);
   }
