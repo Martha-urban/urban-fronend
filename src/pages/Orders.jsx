@@ -83,14 +83,14 @@ export default function Orders() {
       setLoading(true);
       setError("");
 
-  const res = await api.get("/api/v1/orders", {
-  params: {
-    page,
-    size,
-    sort: "createdAt,desc",
-    status: statusFilter || undefined,
-  },
-});
+      const res = await api.get("/api/v1/orders", {
+        params: {
+          page,
+          size,
+          sort: "createdAt,desc",
+          status: statusFilter || undefined,
+        },
+      });
 
       setPageData(res.data);
       setOrders(res.data.content || []);
@@ -434,45 +434,45 @@ export default function Orders() {
       </div>
 
       <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setPage(0);
-              setStatusFilter(e.target.value);
-            }}
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setPage(0);
+            setStatusFilter(e.target.value);
+          }}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #e5e7eb",
+            fontWeight: 700,
+            background: "#fff",
+          }}
+        >
+          <option value="">All Statuses</option>
+
+          {ORDER_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {niceStatus(s)}
+            </option>
+          ))}
+        </select>
+
+        {statusFilter && (
+          <button
+            onClick={() => setStatusFilter("")}
             style={{
-              padding: "10px 12px",
-              borderRadius: 10,
               border: "1px solid #e5e7eb",
-              fontWeight: 700,
               background: "#fff",
+              borderRadius: 10,
+              padding: "10px 12px",
+              cursor: "pointer",
+              fontWeight: 800,
             }}
           >
-            <option value="">All Statuses</option>
-
-            {ORDER_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {niceStatus(s)}
-              </option>
-            ))}
-          </select>
-
-          {statusFilter && (
-            <button
-              onClick={() => setStatusFilter("")}
-              style={{
-                border: "1px solid #e5e7eb",
-                background: "#fff",
-                borderRadius: 10,
-                padding: "10px 12px",
-                cursor: "pointer",
-                fontWeight: 800,
-              }}
-            >
-              Clear Filter
-            </button>
-          )}
-        </div>
+            Clear Filter
+          </button>
+        )}
+      </div>
 
       {/* Orders Table */}
       <div
@@ -488,7 +488,7 @@ export default function Orders() {
           className="desktop-table-header"
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1.2fr 1fr 0.9fr",
+            gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1.2fr 1fr 1fr 1fr 0.9fr",
             gap: 10,
             padding: "14px 16px",
             background: "#f9fafb",
@@ -499,9 +499,11 @@ export default function Orders() {
         >
           <div>Customer</div>
           <div>Product</div>
+          <div>Phone Number</div>
           <div>Amount</div>
           <div>Status</div>
           <div>Delivery City</div>
+          <div>Account Number</div>
           <div>Date</div>
           <div>Action</div>
         </div>
@@ -523,7 +525,7 @@ export default function Orders() {
                   className="desktop-row"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1.2fr 1fr 0.9fr",
+                    gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1.2fr 1fr 1fr 1fr 0.9fr",
                     gap: 10,
                     padding: "14px 16px",
                     borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
@@ -537,6 +539,10 @@ export default function Orders() {
 
                   <div style={{ color: "#374151" }}>
                     {String(o.productName)}
+                  </div>
+
+                  <div style={{ color: "#6b7280" }}>
+                    {String(o.phoneNumber)}
                   </div>
 
                   <div>
@@ -572,8 +578,10 @@ export default function Orders() {
 
                   <div>{o.deliveryCity || "-"}</div>
 
+                  <div>{o.accountNumber || "-"}</div>
+
                   <div style={{ fontWeight: 700 }}>
-                    {o.createdAt ? String(o.createdAt).slice(0, 10) : "-"}
+                    {formatDateTime(o.createdAt)}
                   </div>
 
                   <div>
@@ -619,10 +627,12 @@ export default function Orders() {
                     📍 {o.deliveryCity || "No delivery city"}
                   </div>
 
+                  <div style={{ color: "#6b7280" }}>
+                    {String(o.accountNumber)}
+                  </div>
+
                   <div style={{ marginTop: 6, color: "#374151", fontSize: 13 }}>
-                    📅 {o.createdAt
-                        ? o.createdAt.replace("T", " ").slice(0, 16)
-                        : "-"}
+                    📅 {formatDateTime(o.createdAt)}
                   </div>
 
                   <div className="actions-row" style={{ display: "flex", gap: 10, marginTop: 12 }}>

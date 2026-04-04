@@ -55,7 +55,7 @@ export default function Staff() {
   const size = 10;
   const [pageData, setPageData] = useState(null);
   const [staffList, setStaffList] = useState([]);
-  const roles = ["CASHIER", "MANAGER", "STAFF"];
+  const roles = ["CASHIER", "MANAGER", "STAFF","ATTENDANT"];
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [form, setForm] = useState({
     fullName: "", email: "", phone: "", role: "CASHIER", password: "",
