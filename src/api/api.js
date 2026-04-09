@@ -12,7 +12,7 @@ console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
 // REQUEST INTERCEPTOR
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("urban_access_token");
+    const token = localStorage.getItem("accessToken");
 
     // 🔥 ALWAYS attach token if it exists
     if (token) {
@@ -34,8 +34,8 @@ api.interceptors.response.use(
     // if (status === 401 || status === 403) {
     //   console.warn("Session expired. Redirecting to login.");
 
-    //   localStorage.removeItem("urban_access_token");
-    //   localStorage.removeItem("urban_refresh_token");
+    //   localStorage.removeItem("accessToken");
+    //   localStorage.removeItem("refreshToken");
 
     //   window.location.href = "/login";
     // }

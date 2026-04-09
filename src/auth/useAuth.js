@@ -10,7 +10,7 @@ function parseJwt(token) {
 }
 
 export function useAuth() {
-  const token = localStorage.getItem("urban_access_token");
+  const token = localStorage.getItem("accessToken");
 
   const user = useMemo(() => {
     if (!token) return null;

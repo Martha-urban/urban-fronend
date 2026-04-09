@@ -9,6 +9,7 @@ import StaffLogs from "./pages/StaffLogs";
 import Payment from "./pages/Payment";
 import Staff from "./pages/Staff";
 import Login from "./pages/Login";
+import OTPVerification from "./pages/OTPVerification";
 import Category from "./pages/Category";
 import Product from "./pages/Product";
 import Expenses from "./pages/Expense";
@@ -17,7 +18,7 @@ import CRM from "./pages/crm";
 
 /* Protect private routes */
 function PrivateRoute({ children }) {
-  const token = localStorage.getItem("urban_access_token");
+  const token = localStorage.getItem("accessToken");
 
   if (!token) {
     return <Navigate to="/login" replace />;
@@ -28,7 +29,7 @@ function PrivateRoute({ children }) {
 
 /* Prevent logged-in users from seeing login */
 function PublicRoute({ children }) {
-  const token = localStorage.getItem("urban_access_token");
+  const token = localStorage.getItem("accessToken");
 
   if (token) {
     return <Navigate to="/dashboard" replace />;
@@ -39,7 +40,7 @@ function PublicRoute({ children }) {
 
 export default function App() {
 
-  const token = localStorage.getItem("urban_access_token");
+  const token = localStorage.getItem("accessToken");
 
   return (
     <Routes>
@@ -60,6 +61,14 @@ export default function App() {
         element={
           <PublicRoute>
             <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/verify-otp"
+        element={
+          <PublicRoute>
+            <OTPVerification />
           </PublicRoute>
         }
       />

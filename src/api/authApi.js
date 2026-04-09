@@ -11,3 +11,8 @@ export async function loginUser(payload) {
   const res = await authApi.post("/api/v1/auth/login", payload);
   return res.data;
 }
+
+export async function verifyOtp(payload) {
+  const res = await authApi.post("/api/v1/auth/verify-otp", payload);
+  return res.data;
+}

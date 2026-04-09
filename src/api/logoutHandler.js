@@ -7,8 +7,8 @@ const handleLogout = async () => {
     console.log("Logout request failed, continuing anyway");
   }
 
-  localStorage.removeItem("urban_access_token");
-  localStorage.removeItem("urban_refresh_token");
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
 
   navigate("/login");
 };

@@ -35,12 +35,11 @@ export default function Login() {
         password: form.password,
       });
 
-      // Save tokens
-      localStorage.setItem("urban_access_token", data.accessToken);
-      localStorage.setItem("urban_refresh_token", data.refreshToken);
+      // Store email for OTP
+      localStorage.setItem("otp_email", form.email);
 
-      // Redirect
-      navigate("/dashboard");
+      // Redirect to OTP verification
+      navigate("/verify-otp");
     } catch (err) {
       const msg =
         err?.response?.data?.message ||

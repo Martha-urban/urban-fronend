@@ -20,8 +20,9 @@ export default function Sidebar({ onClose, mobile = false }) {
       console.log("Logout request failed, continuing anyway");
     }
 
-    localStorage.removeItem("urban_access_token");
-    localStorage.removeItem("urban_refresh_token");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("otp_email");
 
     navigate("/login");
   };
