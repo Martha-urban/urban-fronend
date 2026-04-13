@@ -8,6 +8,8 @@ import Inventory from "./pages/Inventory";
 import StaffLogs from "./pages/StaffLogs";
 import Payment from "./pages/Payment";
 import Staff from "./pages/Staff";
+import Requisition from "./pages/Requisition";
+import RequisitionList from "./pages/RequisitionList";
 import Login from "./pages/Login";
 import OTPVerification from "./pages/OTPVerification";
 import Category from "./pages/Category";
@@ -84,6 +86,8 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/crm" element={<CRM />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/requisitions" element={<RequisitionList />} />
+        <Route path="/requisitions/new" element={<Requisition />} />
         <Route path="/categories" element={<Category />} />
         <Route path="/products" element={<Product />} />
         <Route path="/payments" element={<Payment />} />
