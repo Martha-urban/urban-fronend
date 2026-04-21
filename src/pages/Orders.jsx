@@ -28,6 +28,9 @@ export default function Orders() {
   // Edit status modal
   const [editingOrder, setEditingOrder] = useState(null);
   const [editStatus, setEditStatus] = useState("AWAITING_DISPATCH");
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [noteText, setNoteText] = useState("");
+  const [noteError, setNoteError] = useState("");
 
   // Quick Order form
   const [customerForm, setCustomerForm] = useState({
@@ -343,6 +346,47 @@ export default function Orders() {
     }
   }
 
+  function openNotesModal(order) {
+    setSelectedOrder(order);
+    setNoteText(order.deliveryNotes || "");
+    setNoteError("");
+  }
+
+  function closeNotesModal() {
+    setSelectedOrder(null);
+    setNoteText("");
+    setNoteError("");
+  }
+
+  async function handleUpdateNotes() {
+    if (!selectedOrder?.id) return;
+
+    try {
+      setLoading(true);
+      setNoteError("");
+
+      await api.patch(`/api/v1/orders/${selectedOrder.id}`, {
+        deliveryNotes: noteText || null,
+      });
+
+      closeNotesModal();
+      await loadOrders();
+
+      alert("Delivery notes updated.");
+    } catch (e) {
+      console.log(e);
+      setNoteError("Failed to update delivery notes.");
+      alert("Failed to update notes. Check console.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function previewText(text, maxLength = 60) {
+    if (!text) return "No delivery notes";
+    return text.length <= maxLength ? text : `${text.slice(0, maxLength)}…`;
+  }
+
   return (
     <div style={{ padding: 18 }}>
       {/* ✅ Responsive CSS must be INSIDE return */}
@@ -488,7 +532,7 @@ export default function Orders() {
           className="desktop-table-header"
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1.2fr 1fr 1fr 1fr 0.9fr",
+            gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1fr 1.6fr 1fr 1fr 1fr 1.1fr",
             gap: 10,
             padding: "14px 16px",
             background: "#f9fafb",
@@ -502,6 +546,7 @@ export default function Orders() {
           <div>Phone Number</div>
           <div>Amount</div>
           <div>Status</div>
+          <div>Notes</div>
           <div>Delivery City</div>
           <div>Account Number</div>
           <div>Date</div>
@@ -525,7 +570,7 @@ export default function Orders() {
                   className="desktop-row"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1.2fr 1fr 1fr 1fr 0.9fr",
+                    gridTemplateColumns: "1fr 1fr 1fr 1.3fr 1fr 1.6fr 1fr 1fr 1fr 1.1fr",
                     gap: 10,
                     padding: "14px 16px",
                     borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
@@ -576,6 +621,10 @@ export default function Orders() {
                     </span>
                   </div>
 
+                  <div style={{ color: "#374151", fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {previewText(o.deliveryNotes, 40)}
+                  </div>
+
                   <div>{o.deliveryCity || "-"}</div>
 
                   <div>{o.accountNumber || "-"}</div>
@@ -584,9 +633,12 @@ export default function Orders() {
                     {formatDateTime(o.createdAt)}
                   </div>
 
-                  <div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button onClick={() => openEditModal(o)} style={editBtn}>
                       ✏️ Edit
+                    </button>
+                    <button onClick={() => openNotesModal(o)} style={noteBtn}>
+                      📝 Notes
                     </button>
                   </div>
                 </div>
@@ -632,12 +684,19 @@ export default function Orders() {
                   </div>
 
                   <div style={{ marginTop: 6, color: "#374151", fontSize: 13 }}>
+                    <strong>Notes:</strong> {previewText(o.deliveryNotes, 80)}
+                  </div>
+
+                  <div style={{ marginTop: 6, color: "#374151", fontSize: 13 }}>
                     📅 {formatDateTime(o.createdAt)}
                   </div>
 
-                  <div className="actions-row" style={{ display: "flex", gap: 10, marginTop: 12 }}>
+                  <div className="actions-row" style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                     <button onClick={() => openEditModal(o)} style={editBtn}>
                       ✏️ Edit
+                    </button>
+                    <button onClick={() => openNotesModal(o)} style={noteBtn}>
+                      📝 Notes
                     </button>
                   </div>
                 </div>
@@ -980,6 +1039,68 @@ export default function Orders() {
           </div>
         </div>
       )}
+
+      {selectedOrder && (
+        <div style={modalOverlay} onClick={closeNotesModal}>
+          <div style={modalBoxSmall} onClick={(e) => e.stopPropagation()}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <h3 style={{ margin: 0 }}>Delivery Notes</h3>
+              <button onClick={closeNotesModal} style={xBtn}>
+                ✖
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 10, color: "#6b7280" }}>
+              Order: <b>{String(selectedOrder.id).slice(0, 8).toUpperCase()}</b>
+            </div>
+
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Enter delivery notes, customer comments, or pickup instructions"
+              style={{
+                width: "100%",
+                minHeight: 140,
+                borderRadius: 12,
+                border: "1px solid #e5e7eb",
+                padding: 12,
+                fontFamily: "inherit",
+                resize: "vertical",
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                marginTop: 16,
+              }}
+            >
+              <button onClick={closeNotesModal} style={cancelBtn}>
+                Cancel
+              </button>
+
+              <button onClick={handleUpdateNotes} style={saveBtn}>
+                {loading ? "Saving..." : "Save Notes"}
+              </button>
+            </div>
+
+            {noteError && (
+              <div style={{ marginTop: 10, color: "crimson", fontWeight: 700 }}>
+                {noteError}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1123,4 +1244,14 @@ const saveBtn = {
   borderRadius: 12,
   cursor: "pointer",
   fontWeight: 900,
+};
+
+const noteBtn = {
+  border: "1px solid #e5e7eb",
+  background: "#fff",
+  padding: "8px 10px",
+  borderRadius: 10,
+  cursor: "pointer",
+  fontWeight: 900,
+  fontSize: 12,
 };
