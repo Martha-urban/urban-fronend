@@ -365,7 +365,7 @@ export default function Orders() {
       setLoading(true);
       setNoteError("");
 
-      await api.patch(`/api/v1/orders/${selectedOrder.id}`, {
+      await api.patch(`/api/v1/orders/${selectedOrder.id}/notes`, {
         deliveryNotes: noteText || null,
       });
 

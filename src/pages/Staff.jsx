@@ -6,7 +6,7 @@ import PermissionGate from "../auth/PermissionGate";
 
 const PERMISSION_GROUPS = {
   "CRM / Leads":  ["CAN_VIEW_LEADS","CAN_CREATE_LEADS","CAN_UPDATE_LEAD_STATUS","CAN_CONVERT_LEADS"],
-  "Orders":       ["CAN_VIEW_ORDERS","CAN_CREATE_ORDERS","CAN_UPDATE_ORDER_STATUS","CAN_VIEW_ORDER_SUMMARY","CAN_VIEW_TOP_SELLING"],
+  "Orders":       ["CAN_VIEW_ORDERS","CAN_CREATE_ORDERS","CAN_UPDATE_ORDER_STATUS","CAN_UPDATE_DELIVERY_NOTES","CAN_VIEW_ORDER_SUMMARY","CAN_VIEW_TOP_SELLING"],
   "Products":     ["CAN_VIEW_PRODUCTS","CAN_CREATE_PRODUCTS","CAN_EDIT_PRODUCTS","CAN_DELETE_PRODUCTS"],
   "Categories":   ["CAN_VIEW_CATEGORIES","CAN_CREATE_CATEGORIES","CAN_EDIT_CATEGORIES","CAN_DELETE_CATEGORIES"],
   "Customers":    ["CAN_VIEW_CUSTOMERS","CAN_CREATE_CUSTOMERS","CAN_DELETE_CUSTOMERS"],
@@ -23,9 +23,10 @@ const PERMISSION_LABELS = {
   CAN_VIEW_LEADS: "View leads", CAN_CREATE_LEADS: "Create leads",
   CAN_UPDATE_LEAD_STATUS: "Update lead status", CAN_CONVERT_LEADS: "Convert leads",
   CAN_VIEW_ORDERS: "View orders", CAN_CREATE_ORDERS: "Create orders",
-  CAN_UPDATE_ORDER_STATUS: "Update order status", CAN_VIEW_ORDER_SUMMARY: "View order summary",
-  CAN_VIEW_TOP_SELLING: "View top selling", CAN_VIEW_PRODUCTS: "View products",
-  CAN_CREATE_PRODUCTS: "Create products", CAN_EDIT_PRODUCTS: "Edit products",
+  CAN_UPDATE_ORDER_STATUS: "Update order status", CAN_UPDATE_DELIVERY_NOTES: "Update delivery notes",
+  CAN_VIEW_ORDER_SUMMARY: "View order summary", CAN_VIEW_TOP_SELLING: "View top selling",
+  CAN_VIEW_PRODUCTS: "View products", CAN_CREATE_PRODUCTS: "Create products",
+  CAN_EDIT_PRODUCTS: "Edit products",
   CAN_DELETE_PRODUCTS: "Delete products", CAN_VIEW_CATEGORIES: "View categories",
   CAN_CREATE_CATEGORIES: "Create categories", CAN_EDIT_CATEGORIES: "Edit categories",
   CAN_DELETE_CATEGORIES: "Delete categories", CAN_VIEW_CUSTOMERS: "View customers",
