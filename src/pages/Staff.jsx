@@ -15,7 +15,7 @@ const PERMISSION_GROUPS = {
   "Requisitions": ["CAN_VIEW_REQUISITIONS","CAN_CREATE_REQUISITIONS","CAN_VIEW_OWN_REQUISITIONS","CAN_APPROVE_REQUISITIONS","CAN_REJECT_REQUISITIONS","CAN_MARK_REQUISITION_PAID"],
   "Expenses":     ["CAN_VIEW_EXPENSES","CAN_CREATE_EXPENSES","CAN_DELETE_EXPENSES"],
   "Payroll":      ["CAN_VIEW_OWN_PAYROLL","CAN_VIEW_PAYROLL_SUMMARY"],
-  "Reports":      ["CAN_VIEW_PROFIT_REPORT"],
+  // "Reports":      ["CAN_VIEW_PROFIT_REPORT"],
   "Admin":        ["CAN_VIEW_STAFF","CAN_DELETE_STAFF","CAN_MANAGE_PERMISSIONS"],
 };
 
@@ -40,7 +40,7 @@ const PERMISSION_LABELS = {
   CAN_REJECT_REQUISITIONS: "Reject requisitions", CAN_MARK_REQUISITION_PAID: "Mark requisition paid",
   CAN_VIEW_EXPENSES: "View expenses", CAN_CREATE_EXPENSES: "Create expenses",
   CAN_DELETE_EXPENSES: "Delete expenses", CAN_VIEW_OWN_PAYROLL: "View own payroll",
-  CAN_VIEW_PAYROLL_SUMMARY: "View payroll summary", CAN_VIEW_PROFIT_REPORT: "View profit report",
+  CAN_VIEW_PAYROLL_SUMMARY: "View payroll summary",
   CAN_VIEW_STAFF: "View staff", CAN_DELETE_STAFF: "Delete staff",
   CAN_MANAGE_PERMISSIONS: "Manage permissions",
 };
