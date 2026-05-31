@@ -93,6 +93,58 @@ export default function Expenses() {
 
   return (
     <div style={{ padding: 18 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .desktop-table,
+          .desktop-row,
+          .desktop-header {
+            display: none !important;
+          }
+
+          .mobile-card {
+            display: block;
+            background: #fff;
+            border-radius: 14px;
+            padding: 14px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 12px;
+          }
+
+          .actions-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+
+          .actions-row button {
+            width: 100%;
+          }
+
+          .modal-box {
+            width: 95vw !important;
+            max-height: 92vh !important;
+            overflow-y: auto !important;
+          }
+
+          .modal-form {
+            grid-template-columns: 1fr !important;
+          }
+
+          .modal-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+
+          .modal-actions button {
+            width: 100%;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .mobile-card {
+            display: none;
+          }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ marginBottom: 14 }}>
         <h2 style={{ margin: 0, fontSize: 22 }}>Expenses</h2>
@@ -103,6 +155,7 @@ export default function Expenses() {
 
       {/* Actions */}
       <div
+        className="actions-row"
         style={{
           display: "flex",
           gap: 10,
@@ -180,43 +233,74 @@ export default function Expenses() {
         ) : expenses.length === 0 ? (
           <div style={{ color: "#6b7280" }}>No expenses found.</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ textAlign: "left", color: "#6b7280" }}>
-                  <th style={{ paddingBottom: 10 }}>Type</th>
-                  <th style={{ paddingBottom: 10 }}>Amount</th>
-                  <th style={{ paddingBottom: 10 }}>Payment</th>
-                  <th style={{ paddingBottom: 10 }}>Reference</th>
-                  <th style={{ paddingBottom: 10 }}>Description</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {expenses.map((e) => (
-                  <tr key={e.id} style={{ borderTop: "1px solid #f3f4f6" }}>
-                    <td style={{ padding: "12px 0", fontWeight: 800 }}>
-                      {e.expenseType}
-                    </td>
-
-                    <td style={{ padding: "12px 0", fontWeight: 800 }}>
-                      {money(e.amount)}
-                    </td>
-
-                    <td style={{ padding: "12px 0" }}>{e.paymentMethod}</td>
-
-                    <td style={{ padding: "12px 0", color: "#6b7280" }}>
-                      {e.referenceCode || "-"}
-                    </td>
-
-                    <td style={{ padding: "12px 0", color: "#6b7280" }}>
-                      {e.description || "-"}
-                    </td>
+          <>
+            <div style={{ overflowX: "auto" }}>
+              <table className="desktop-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead className="desktop-header">
+                  <tr style={{ textAlign: "left", color: "#6b7280" }}>
+                    <th style={{ paddingBottom: 10 }}>Type</th>
+                    <th style={{ paddingBottom: 10 }}>Amount</th>
+                    <th style={{ paddingBottom: 10 }}>Payment</th>
+                    <th style={{ paddingBottom: 10 }}>Reference</th>
+                    <th style={{ paddingBottom: 10 }}>Description</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {expenses.map((e) => (
+                    <tr key={e.id} className="desktop-row" style={{ borderTop: "1px solid #f3f4f6" }}>
+                      <td style={{ padding: "12px 0", fontWeight: 800 }}>
+                        {e.expenseType}
+                      </td>
+
+                      <td style={{ padding: "12px 0", fontWeight: 800 }}>
+                        {money(e.amount)}
+                      </td>
+
+                      <td style={{ padding: "12px 0" }}>{e.paymentMethod}</td>
+
+                      <td style={{ padding: "12px 0", color: "#6b7280" }}>
+                        {e.referenceCode || "-"}
+                      </td>
+
+                      <td style={{ padding: "12px 0", color: "#6b7280" }}>
+                        {e.description || "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              {expenses.map((e) => (
+                <div key={`${e.id}-mobile`} className="mobile-card">
+                  <div style={{ display: "grid", gap: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ color: "#6b7280", fontSize: 13 }}>Type</span>
+                      <span style={{ fontWeight: 800 }}>{e.expenseType}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ color: "#6b7280", fontSize: 13 }}>Amount</span>
+                      <span style={{ fontWeight: 800 }}>{money(e.amount)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ color: "#6b7280", fontSize: 13 }}>Payment</span>
+                      <span>{e.paymentMethod}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ color: "#6b7280", fontSize: 13 }}>Reference</span>
+                      <span style={{ color: "#6b7280" }}>{e.referenceCode || "-"}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ color: "#6b7280", fontSize: 13 }}>Description</span>
+                      <span style={{ color: "#6b7280" }}>{e.description || "-"}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
@@ -235,6 +319,7 @@ export default function Expenses() {
           }}
         >
           <div
+            className="modal-box"
             style={{
               width: "100%",
               maxWidth: 520,
@@ -246,7 +331,7 @@ export default function Expenses() {
           >
             <h3 style={{ margin: 0, marginBottom: 12 }}>Add Expense</h3>
 
-            <div style={{ display: "grid", gap: 10 }}>
+            <div className="modal-form" style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr 1fr" }}>
               <select
                 value={form.expenseType}
                 onChange={(e) =>
@@ -326,6 +411,7 @@ export default function Expenses() {
             </div>
 
             <div
+              className="modal-actions"
               style={{
                 display: "flex",
                 justifyContent: "flex-end",
