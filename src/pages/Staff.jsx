@@ -118,7 +118,8 @@ export default function Staff() {
     try {
       setPermSaving(true);
       await api.put(`/api/v1/admin/permissions/${permStaff.id}`, grantedPerms);
-      closePermissions();
+      setPermSuccess("Permissions saved successfully!");
+      setTimeout(() => setPermSuccess(""), 3000);
     } catch (e) {
       alert("Failed to save permissions.");
     } finally {
@@ -198,74 +199,14 @@ export default function Staff() {
 
   return (
     <div style={{ padding: 18 }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .desktop-table-header,
-          .desktop-row {
-            display: none !important;
-          }
-
-          .mobile-card {
-            display: block;
-            padding: 14px;
-            border-top: 1px solid #f3f4f6;
-            background: #fff;
-          }
-
-          .responsive-grid-2 {
-            grid-template-columns: 1fr !important;
-          }
-
-          .header-flex {
-            flex-direction: column;
-            align-items: flex-start !important;
-            gap: 12px;
-          }
-
-          .header-actions {
-            width: 100%;
-            justify-content: space-between;
-          }
-
-          .action-buttons {
-            width: 100%;
-            flex-wrap: wrap;
-          }
-
-          .modal-box {
-            width: 95vw !important;
-            max-height: 90vh !important;
-            overflow-y: auto !important;
-          }
-
-          .modal-actions {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .modal-actions button {
-            width: 100%;
-          }
-
-          .permissions-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-
-        @media (min-width: 769px) {
-          .mobile-card {
-            display: none;
-          }
-        }
-      `}</style>
 
       <div style={{ marginBottom: 14 }}>
         <h2 style={{ margin: 0, fontSize: 22 }}>Staff</h2>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>Add and manage your staff accounts</p>
       </div>
 
-      <div className="header-flex" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #e5e7eb", background: "#fff", padding: "10px 14px", borderRadius: 12, minWidth: 280, width: "100%", maxWidth: 420 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #e5e7eb", background: "#fff", padding: "10px 14px", borderRadius: 12, minWidth: 280 }}>
           <span style={{ opacity: 0.7 }}>🔍</span>
           <input
             value={search}
@@ -291,7 +232,7 @@ export default function Staff() {
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden" }}>
 
         {/* Table header */}
-        <div className="desktop-table-header" style={{ display: "grid", gridTemplateColumns: "1.4fr 1.2fr 1fr 1fr 1.6fr", gap: 10, padding: "14px 16px", background: "#f9fafb", fontWeight: 900, color: "#374151", fontSize: 13 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1.2fr 1fr 1fr 1.6fr", gap: 10, padding: "14px 16px", background: "#f9fafb", fontWeight: 900, color: "#374151", fontSize: 13 }}>
           <div>Full name</div>
           <div>Phone</div>
           <div>Role</div>
@@ -303,118 +244,60 @@ export default function Staff() {
         {filteredStaff.map((s, idx) => {
           const fullName = `${s.firstName || ""} ${s.lastName || ""}`.trim();
           return (
-            <React.Fragment key={s.id}>
-              <div
-                className="desktop-row"
-                onClick={() => navigate(`/staff/${s.id}`)}
-                style={{
-                  display: "grid", gridTemplateColumns: "1.4fr 1.2fr 1fr 1fr 1.6fr",
-                  gap: 10, padding: "14px 16px",
-                  borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
-                  alignItems: "center", fontSize: 14,
-                  cursor: "pointer",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
-                onMouseLeave={e => e.currentTarget.style.background = "#fff"}
-              >
-                <div style={{ fontWeight: 800 }}>{fullName || "-"}</div>
-                <div style={{ fontWeight: 700 }}>{s.phoneNumber || "-"}</div>
-                <div style={{ fontWeight: 800 }}>{normalizeRole(s.role)}</div>
-                <div>
-                  <span style={{ background: "#dcfce7", color: "#166534", padding: "6px 10px", borderRadius: 999, fontWeight: 900, fontSize: 13 }}>
-                    Active
-                  </span>
-                </div>
-
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-
-                  <PermissionGate permission="CAN_VIEW_STAFF">
-                    <button
-                      onClick={e => { e.stopPropagation(); navigate(`/staff/${s.id}`); }}
-                      style={actionBtn}
-                    >
-                      ✏️ Edit
-                    </button>
-                  </PermissionGate>
-
-                  <PermissionGate permission="CAN_MANAGE_PERMISSIONS">
-                    <button
-                      onClick={e => { e.stopPropagation(); openPermissions(s); }}
-                      style={{ ...actionBtn, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}
-                    >
-                      🔐 Permissions
-                    </button>
-                  </PermissionGate>
-
-                  <PermissionGate permission="CAN_DELETE_STAFF">
-                    <button
-                      onClick={e => { e.stopPropagation(); handleDeleteStaff(s.id); }}
-                      style={{ ...actionBtn, background: "#fee2e2", color: "#991b1b" }}
-                    >
-                      🗑 Delete
-                    </button>
-                  </PermissionGate>
-
-                </div>
+            <div
+              key={s.id}
+              onClick={() => navigate(`/staff/${s.id}`)}
+              style={{
+                display: "grid", gridTemplateColumns: "1.4fr 1.2fr 1fr 1fr 1.6fr",
+                gap: 10, padding: "14px 16px",
+                borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
+                alignItems: "center", fontSize: 14,
+                cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+              onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+            >
+              <div style={{ fontWeight: 800 }}>{fullName || "-"}</div>
+              <div style={{ fontWeight: 700 }}>{s.phoneNumber || "-"}</div>
+              <div style={{ fontWeight: 800 }}>{normalizeRole(s.role)}</div>
+              <div>
+                <span style={{ background: "#dcfce7", color: "#166534", padding: "6px 10px", borderRadius: 999, fontWeight: 900, fontSize: 13 }}>
+                  Active
+                </span>
               </div>
 
-              <div
-                className="mobile-card"
-                onClick={() => navigate(`/staff/${s.id}`)}
-                style={{ cursor: "pointer" }}
-              >
-                <div style={{ display: "grid", gap: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <span style={{ color: "#6b7280", fontSize: 13 }}>Name</span>
-                    <span style={{ fontWeight: 800 }}>{fullName || "-"}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <span style={{ color: "#6b7280", fontSize: 13 }}>Phone</span>
-                    <span style={{ fontWeight: 700 }}>{s.phoneNumber || "-"}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <span style={{ color: "#6b7280", fontSize: 13 }}>Role</span>
-                    <span style={{ fontWeight: 800 }}>{normalizeRole(s.role)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <span style={{ color: "#6b7280", fontSize: 13 }}>Status</span>
-                    <span style={{ background: "#dcfce7", color: "#166534", padding: "6px 10px", borderRadius: 999, fontWeight: 900, fontSize: 13 }}>
-                      Active
-                    </span>
-                  </div>
-                </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
 
-                <div className="action-buttons" style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
-                  <PermissionGate permission="CAN_VIEW_STAFF">
-                    <button
-                      onClick={e => { e.stopPropagation(); navigate(`/staff/${s.id}`); }}
-                      style={actionBtn}
-                    >
-                      ✏️ Edit
-                    </button>
-                  </PermissionGate>
+                <PermissionGate permission="CAN_VIEW_STAFF">
+                  <button
+                    onClick={e => { e.stopPropagation(); navigate(`/staff/${s.id}`); }}
+                    style={actionBtn}
+                  >
+                    ✏️ Edit
+                  </button>
+                </PermissionGate>
 
-                  <PermissionGate permission="CAN_MANAGE_PERMISSIONS">
-                    <button
-                      onClick={e => { e.stopPropagation(); openPermissions(s); }}
-                      style={{ ...actionBtn, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}
-                    >
-                      🔐 Permissions
-                    </button>
-                  </PermissionGate>
+                <PermissionGate permission="CAN_MANAGE_PERMISSIONS">
+                  <button
+                    onClick={e => { e.stopPropagation(); openPermissions(s); }}
+                    style={{ ...actionBtn, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}
+                  >
+                    🔐 Permissions
+                  </button>
+                </PermissionGate>
 
-                  <PermissionGate permission="CAN_DELETE_STAFF">
-                    <button
-                      onClick={e => { e.stopPropagation(); handleDeleteStaff(s.id); }}
-                      style={{ ...actionBtn, background: "#fee2e2", color: "#991b1b" }}
-                    >
-                      🗑 Delete
-                    </button>
-                  </PermissionGate>
-                </div>
+                <PermissionGate permission="CAN_DELETE_STAFF">
+                  <button
+                    onClick={e => { e.stopPropagation(); handleDeleteStaff(s.id); }}
+                    style={{ ...actionBtn, background: "#fee2e2", color: "#991b1b" }}
+                  >
+                    🗑 Delete
+                  </button>
+                </PermissionGate>
+
               </div>
-            </React.Fragment>
+            </div>
           );
         })}
 
@@ -438,9 +321,9 @@ export default function Staff() {
       {/* ADD STAFF MODAL */}
       {isAddOpen && can("CAN_MANAGE_PERMISSIONS") && (
         <div style={modalOverlay}>
-          <div className="modal-box" style={modalBox}>
+          <div style={modalBox}>
             <h3 style={{ marginTop: 0 }}>Add Staff</h3>
-            <div className="responsive-grid-2" style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
+            <div style={{ display: "grid", gap: 12 }}>
               <input name="fullName" value={form.fullName} onChange={handleAddChange} placeholder="Full Name" style={inputStyle} />
               <input name="email" value={form.email} onChange={handleAddChange} placeholder="Email" style={inputStyle} />
               <input name="phone" value={form.phone} onChange={handleAddChange} placeholder="Phone" style={inputStyle} />
@@ -449,7 +332,7 @@ export default function Staff() {
                 {roles.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
-            <div className="modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
               <button onClick={closeAddModal} style={cancelBtn}>Cancel</button>
               <button onClick={handleAddStaff} style={saveBtn}>
                 {loading ? "Adding..." : "Add Staff"}
@@ -462,7 +345,7 @@ export default function Staff() {
       {/* PERMISSIONS MODAL */}
       {permStaff && (
         <div style={modalOverlay}>
-          <div className="modal-box" style={{ ...modalBox, width: "680px", maxHeight: "85vh", overflowY: "auto" }}>
+          <div style={{ ...modalBox, width: "680px", maxHeight: "85vh", overflowY: "auto" }}>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div>
@@ -492,7 +375,7 @@ export default function Staff() {
                   <div style={{ fontSize: 11, fontWeight: 900, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
                     {group}
                   </div>
-                  <div className="permissions-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                     {perms.map(perm => {
                       const checked = grantedPerms.includes(perm);
                       return (
@@ -530,7 +413,7 @@ export default function Staff() {
               ))
             )}
 
-            <div className="modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
               <button onClick={closePermissions} style={cancelBtn}>Close</button>
               <button onClick={savePermissions} disabled={permSaving} style={saveBtn}>
                 {permSaving ? "Saving..." : "Save Permissions"}

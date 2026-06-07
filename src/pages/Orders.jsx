@@ -45,6 +45,7 @@ export default function Orders() {
     deliveryCity: "",
     deliveryNotes: "",
     assignedTo: "",
+    discount: 0,
   });
 
   const [itemForm, setItemForm] = useState({
@@ -129,6 +130,7 @@ export default function Orders() {
       deliveryCity: "",
       deliveryNotes: "",
       assignedTo: "",
+      discount: 0,
     });
 
     setCartItems([]);
@@ -259,8 +261,23 @@ export default function Orders() {
       return;
     }
 
+    const discountAmount = Number(orderForm.discount || 0);
     if (cartItems.length === 0) {
       alert("Add at least one product to the order.");
+      return;
+    }
+
+    if (discountAmount < 0) {
+      alert("Discount cannot be negative.");
+      return;
+    }
+
+    const cartTotal = cartItems.reduce((sum, i) => {
+      return sum + Number(i.sellingPrice || 0) * Number(i.quantity || 0);
+    }, 0);
+
+    if (discountAmount > cartTotal) {
+      alert("Discount cannot exceed the cart total.");
       return;
     }
 
@@ -289,6 +306,7 @@ export default function Orders() {
         customerId,
         orderType: orderForm.orderType || "ONLINE",
         assignedTo: orderForm.assignedTo || null,
+        discount: Number(orderForm.discount || 0),
 
         deliveryCity:
           orderForm.orderType === "ONLINE" ? orderForm.deliveryCity : null,
@@ -869,6 +887,30 @@ export default function Orders() {
               </>
             )}
 
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              <label style={{ fontWeight: 800, fontSize: 13, color: "#374151" }}>
+                Discount (KES)
+              </label>
+              <input
+                name="discount"
+                value={orderForm.discount}
+                onChange={handleOrderChange}
+                placeholder="0"
+                type="number"
+                min="0"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #e5e7eb",
+                  marginTop: 6,
+                  outline: "none",
+                  background: "#fff",
+                  fontWeight: 700,
+                }}
+              />
+            </div>
+
             {/* Items */}
             <div style={{ fontWeight: 900, marginTop: 14, marginBottom: 8 }}>
               Items
@@ -959,6 +1001,30 @@ export default function Orders() {
                 >
                   <div>Total</div>
                   <div>{formatMoney(cartTotal)}</div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: 8,
+                    color: "#6b7280",
+                  }}
+                >
+                  <div>Discount</div>
+                  <div>{formatMoney(Number(orderForm.discount || 0))}</div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: 10,
+                    fontWeight: 900,
+                  }}
+                >
+                  <div>Grand Total</div>
+                  <div>{formatMoney(Math.max(0, cartTotal - Number(orderForm.discount || 0)))}</div>
                 </div>
               </div>
             )}

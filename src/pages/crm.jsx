@@ -16,6 +16,7 @@ export default function CRM() {
   const [quantity, setQuantity] = useState(1);
   const [deliveryCity, setDeliveryCity] = useState("");
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [discount, setDiscount] = useState(0);
   const [converting, setConverting] = useState(false);
   const [productPrice, setProductPrice] = useState(0);         // ✅ KEEP this state
 
@@ -62,6 +63,7 @@ export default function CRM() {
     setQuantity(1);
     setDeliveryCity(lead.location || "");
     setDeliveryFee(0);
+    setDiscount(0);
     setProductPrice(0);
 
     try {
@@ -77,11 +79,29 @@ export default function CRM() {
   const convertLead = async () => {
     try {
       setConverting(true);
-      await api.post(`/api/v1/leads/${selectedLead.id}/convert`, {
+      const subtotal = Number(quantity) * Number(productPrice);
+      const safeDeliveryFee = Number(deliveryFee) >= 0 ? Number(deliveryFee) : 0;
+      const safeDiscount = Number(discount || 0) >= 0 ? Number(discount || 0) : 0;
+      const totalAmount = Math.max(0, subtotal + safeDeliveryFee - safeDiscount);
+
+      const conversionPayload = {
         quantity: Number(quantity),
         deliveryCity,
-        deliveryFee: Number(deliveryFee)
-      });
+        deliveryFee: safeDeliveryFee,
+        discount: safeDiscount,
+        totalAmount,
+      };
+
+      if (conversionPayload.discount < 0) {
+        alert("Discount cannot be negative.");
+        return;
+      }
+      if (conversionPayload.discount > subtotal + safeDeliveryFee) {
+        alert("Discount cannot exceed the total order amount.");
+        return;
+      }
+
+      await api.post(`/api/v1/leads/${selectedLead.id}/convert`, conversionPayload);
       setSelectedLead(null);
       fetchLeads();
     } catch (err) {
@@ -96,7 +116,9 @@ export default function CRM() {
   // and use the state variable instead
   const safeQuantity = Number(quantity) > 0 ? Number(quantity) : 1;
   const subtotal = safeQuantity * Number(productPrice);
-  const totalAmount = subtotal + Number(deliveryFee);
+  const safeDeliveryFee = Number(deliveryFee) >= 0 ? Number(deliveryFee) : 0;
+  const safeDiscount = Number(discount) >= 0 ? Number(discount) : 0;
+  const totalAmount = Math.max(0, subtotal + safeDeliveryFee - safeDiscount);
 
   const totalLeads = pageData?.totalElements || 0;
   const newLeads = leads.filter(l => l.status === "NEW").length;
@@ -297,8 +319,19 @@ export default function CRM() {
               </div>
 
               <div>
+                <label className="text-sm text-gray-600">Discount</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  className="w-full border rounded p-2 mt-1"
+                />
+              </div>
+
+              <div>
                 <label className="text-sm text-gray-600">
-                  Total ({safeQuantity} × KES {Number(productPrice).toLocaleString()} + KES {Number(deliveryFee).toLocaleString()} delivery)
+                  Total ({safeQuantity} × KES {Number(productPrice).toLocaleString()} + KES {Number(safeDeliveryFee).toLocaleString()} delivery - KES {Number(safeDiscount).toLocaleString()} discount)
                 </label>
                 <div className="text-lg font-bold text-green-600">
                   KES {totalAmount.toLocaleString()}
