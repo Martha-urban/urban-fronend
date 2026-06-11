@@ -9,5 +9,5 @@ export function onNotification(handler) {
   bus.addEventListener("notification", wrapped);
   return () => bus.removeEventListener("notification", wrapped);
 }
-
+// raw
 export default { publishNotification, onNotification };
