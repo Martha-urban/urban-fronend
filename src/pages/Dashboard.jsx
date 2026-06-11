@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import StatCard from "../components/StatCard";
 import { api } from "../api/api";
 import { FaBell } from "react-icons/fa";
+import { onNotification } from "../utils/notificationBus";
 import {
   BarChart,
   Bar,
@@ -13,9 +15,11 @@ import {
 } from "recharts";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [from, setFrom] = useState("2026-02-01");
   const [to, setTo] = useState("2026-02-28");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   // Backend state
   const [loading, setLoading] = useState(false);
@@ -65,6 +69,37 @@ export default function Dashboard() {
     loadDashboard();
     // eslint-disable-next-line
   }, []);
+
+  // Subscribe to global notifications
+  useEffect(() => {
+    const unsub = onNotification((n) => {
+      setNotifications((prev) => [n, ...prev]);
+    });
+    return unsub;
+  }, []);
+
+  // When user opens the notifications dropdown, mark all as read on the backend
+  useEffect(() => {
+    if (!showNotifications || notifications.length === 0) return;
+
+    (async () => {
+      try {
+        await api.patch("/api/v1/notifications/read-all");
+        // Optionally clear unread badge by marking items as read locally
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      } catch (err) {
+        console.warn("Failed to mark notifications read", err);
+      }
+    })();
+  }, [showNotifications]);
+
+  const handleNotificationClick = (notification) => {
+    // Navigate to the lead if referenceId exists
+    if (notification.referenceId) {
+      navigate(`/crm/leads/${notification.referenceId}`);
+      setShowNotifications(false);
+    }
+  };
 
   async function loadDashboard() {
     try {
@@ -132,13 +167,43 @@ export default function Dashboard() {
               <FaBell className="text-slate-700 text-lg" />
             </button>
 
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50">
-                <h4 className="font-bold text-slate-700 mb-2">Notifications</h4>
+            {notifications.length > 0 && (
+              <div className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-5 h-5 grid place-items-center text-xs">
+                {notifications.length}
+              </div>
+            )}
 
-                <div className="text-sm text-slate-500">
-                  No notifications yet
+            {showNotifications && (
+              <div className="fixed inset-0 sm:absolute sm:right-0 sm:inset-auto sm:mt-2 sm:w-80 bg-white border border-slate-200 rounded-t-2xl sm:rounded-xl shadow-lg p-4 z-50 sm:max-w-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-bold text-slate-700">Notifications</h4>
+                  <button
+                    onClick={() => setShowNotifications(false)}
+                    className="sm:hidden text-slate-500 hover:text-slate-700 text-xl"
+                  >
+                    ×
+                  </button>
                 </div>
+
+                {notifications.length === 0 ? (
+                  <div className="text-sm text-slate-500 py-4">No notifications yet</div>
+                ) : (
+                  <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          handleNotificationClick(n);
+                          setShowNotifications(false);
+                        }}
+                        className="border-b pb-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition"
+                      >
+                        <div className="font-semibold text-sm">{n.title || n.message}</div>
+                        <div className="text-xs text-slate-500">{n.body || n.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
