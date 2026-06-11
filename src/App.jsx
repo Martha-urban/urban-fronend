@@ -80,6 +80,7 @@ export default function App() {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/crm" element={<CRM />} />
+        <Route path="/crm/leads/:id" element={<CRM />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/requisitions" element={<RequisitionList />} />
         <Route path="/requisitions/new" element={<Requisition />} />
