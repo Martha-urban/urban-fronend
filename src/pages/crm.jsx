@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/api";
-import { publishNotification } from "../utils/notificationBus";
+import { publishNotification } from "../utils/notificationBus.js";
 
 // ─── Toast Component ───────────────────────────────────────────────────────────
 function Toast({ notifications, onDismiss, onNavigate }) {

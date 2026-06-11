@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import StatCard from "../components/StatCard";
 import { api } from "../api/api";
 import { FaBell } from "react-icons/fa";
-import { onNotification } from "../utils/notificationBus";
+import { onNotification } from "../utils/notificationBus.js";
 import {
   BarChart,
   Bar,
