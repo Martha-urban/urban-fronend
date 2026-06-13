@@ -30,8 +30,8 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
 
-    // if token expired or unauthorized
-    if (status === 401 || status === 403) {
+    // only log out when the user is truly unauthorized or token expired
+    if (status === 401) {
       console.warn("Session expired. Redirecting to login.");
 
       localStorage.removeItem("accessToken");

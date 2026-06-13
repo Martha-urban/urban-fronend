@@ -137,7 +137,11 @@ export default function Dashboard() {
       setNetProfit(Number(rep.netProfit || 0));
     } catch (e) {
       console.log(e);
-      setError("Failed to load dashboard data.");
+      if (e.response?.status === 403) {
+        setError("You do not have permission to view these reports.");
+      } else {
+        setError("Failed to load dashboard data.");
+      }
     } finally {
       setLoading(false);
     }
