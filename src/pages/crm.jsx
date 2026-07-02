@@ -170,6 +170,9 @@ export default function CRM() {
   const [discount, setDiscount] = useState(0);
   const [converting, setConverting] = useState(false);
   const [productPrice, setProductPrice] = useState(0);
+  const [noteEdits, setNoteEdits] = useState({});
+  const [focusedNoteId, setFocusedNoteId] = useState(null);
+  const [extraInfo, setExtraInfo] = useState("");
 
   // Toast notifications (live SSE popups)
   const [toasts, setToasts] = useState([]);
@@ -423,6 +426,47 @@ export default function CRM() {
                   <div className="text-gray-500">Location</div>
                   <div className="font-medium truncate">{lead.location}</div>
                 </div>
+                <div>
+                  <div className="text-gray-500">Extra Details</div>
+                  <div className="font-medium truncate">{lead.extraInfo}</div>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="text-gray-500">Customer Notes</div>
+                  <textarea
+                    rows={3}
+                    value={noteEdits[lead.id] ?? lead.customerNotes ?? lead.notes ?? ""}
+                    onFocus={() => setFocusedNoteId(lead.id)}
+                    onBlur={() => setTimeout(() => setFocusedNoteId((prev) => (prev === lead.id ? null : prev)), 100)}
+                    onChange={(e) =>
+                      setNoteEdits((prev) => ({ ...prev, [lead.id]: e.target.value }))
+                    }
+                    className="w-full border rounded p-2 text-sm"
+                    placeholder="Add customer notes here"
+                  />
+                  {(focusedNoteId === lead.id || noteEdits[lead.id] !== undefined) && (
+                    <button
+                      onClick={async () => {
+                        const notes = noteEdits[lead.id] ?? lead.customerNotes ?? lead.notes ?? "";
+                        try {
+                          await api.patch(`/api/v1/leads/${lead.id}`, { notes: notes || null });
+                          setNoteEdits((prev) => {
+                            const next = { ...prev };
+                            delete next[lead.id];
+                            return next;
+                          });
+                          setFocusedNoteId(null);
+                          fetchLeads();
+                        } catch (err) {
+                          console.error("Failed to save notes", err);
+                          alert("Failed to save notes");
+                        }
+                      }}
+                      className="mt-2 w-full bg-blue-600 text-white py-2 rounded text-sm hover:bg-blue-700"
+                    >
+                      Save Notes
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Timestamp */}
@@ -513,6 +557,8 @@ export default function CRM() {
               <th className="p-3 text-left">Phone</th>
               <th className="p-3 text-left">Product</th>
               <th className="p-3 text-left">Location</th>
+              <th className="p-3 text-left">Extra Details</th>
+              <th className="p-3 text-left">Notes</th>
               <th className="p-3 text-left">Status</th>
               <th className="p-3 text-left">Follow-up Date</th>
               <th className="p-3 text-left">Timestamp</th>
@@ -530,6 +576,43 @@ export default function CRM() {
                 <td className="p-3">{lead.phoneNumber}</td>
                 <td className="p-3">{lead.formName}</td>
                 <td className="p-3">{lead.location}</td>
+                <td className="p-3">{lead.extraInfo || "—"}</td>
+                <td className="p-3">
+                  <textarea
+                    rows={2}
+                    value={noteEdits[lead.id] ?? lead.customerNotes ?? lead.notes ?? ""}
+                    onFocus={() => setFocusedNoteId(lead.id)}
+                    onBlur={() => setTimeout(() => setFocusedNoteId((prev) => (prev === lead.id ? null : prev)), 100)}
+                    onChange={(e) =>
+                      setNoteEdits((prev) => ({ ...prev, [lead.id]: e.target.value }))
+                    }
+                    className="w-full border rounded p-1 text-sm"
+                    placeholder="Add notes..."
+                  />
+                  {(focusedNoteId === lead.id || noteEdits[lead.id] !== undefined) && (
+                    <button
+                      onClick={async () => {
+                        const notes = noteEdits[lead.id] ?? lead.customerNotes ?? lead.notes ?? "";
+                        try {
+                          await api.patch(`/api/v1/leads/${lead.id}`, { notes: notes || null });
+                          setNoteEdits((prev) => {
+                            const next = { ...prev };
+                            delete next[lead.id];
+                            return next;
+                          });
+                          setFocusedNoteId(null);
+                          fetchLeads();
+                        } catch (err) {
+                          console.error("Failed to save notes", err);
+                          alert("Failed to save notes");
+                        }
+                      }}
+                      className="mt-2 bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+                    >
+                      Save
+                    </button>
+                  )}
+                </td>
 
                 <td className="p-3">
                   <select
@@ -665,6 +748,16 @@ export default function CRM() {
                 <input type="number" min="0" value={discount}
                   onChange={(e) => setDiscount(e.target.value)}
                   className="w-full border rounded p-2 mt-1" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Customer Notes</label>
+                <textarea
+                  value={customerNotes}
+                  onChange={(e) => setCustomerNotes(e.target.value)}
+                  rows={4}
+                  className="w-full border rounded p-2 mt-1 resize-none"
+                  placeholder="Add what the customer said..."
+                />
               </div>
               <div>
                 <label className="text-sm text-gray-600">
