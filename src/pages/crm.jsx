@@ -173,6 +173,7 @@ export default function CRM() {
   const [noteEdits, setNoteEdits] = useState({});
   const [focusedNoteId, setFocusedNoteId] = useState(null);
   const [extraInfo, setExtraInfo] = useState("");
+  const [customerNotes, setCustomerNotes] = useState("");
 
   // Toast notifications (live SSE popups)
   const [toasts, setToasts] = useState([]);
