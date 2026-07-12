@@ -456,7 +456,7 @@ export default function CRM() {
                 </div>
                 <div>
                   <div className="text-gray-500">Extra Details</div>
-                  <div className="font-medium truncate">{lead.extraInfo}</div>
+                  <div className="font-medium truncate">{lead.additionalInfo}</div>
                 </div>
                 <div className="sm:col-span-2">
                   <div className="text-gray-500">Customer Notes</div>
