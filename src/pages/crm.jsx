@@ -458,6 +458,12 @@ export default function CRM() {
                   <div className="text-gray-500">Extra Details</div>
                   <div className="font-medium truncate">{lead.additionalInfo}</div>
                 </div>
+                {formatProductOptions(lead.productOptions) && (
+                  <div className="sm:col-span-2">
+                    <div className="text-gray-500">Product Options</div>
+                    <div className="font-medium break-words whitespace-normal p-2 bg-blue-50 rounded text-sm">{formatProductOptions(lead.productOptions)}</div>
+                  </div>
+                )}
                 <div className="sm:col-span-2">
                   <div className="text-gray-500">Customer Notes</div>
                   <textarea
@@ -584,6 +590,7 @@ export default function CRM() {
               <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Phone</th>
               <th className="p-3 text-left">Product</th>
+              <th className="p-3 text-left">Options</th>
               <th className="p-3 text-left">Location</th>
               <th className="p-3 text-left">Extra Details</th>
               <th className="p-3 text-left">Notes</th>
@@ -603,6 +610,7 @@ export default function CRM() {
                 <td className="p-3">{lead.name}</td>
                 <td className="p-3">{lead.phoneNumber}</td>
                 <td className="p-3">{lead.formName}</td>
+                <td className="p-3">{formatProductOptions(lead.productOptions) || "—"}</td>
                 <td className="p-3">{lead.location}</td>
                 <td className="p-3">{lead.additionalInfo || "—"}</td>
                 <td className="p-3">
@@ -835,4 +843,28 @@ const formatDateTime = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
   return `${date.toLocaleDateString("en-CA")} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+};
+
+const formatProductOptions = (productOptionsJson) => {
+  if (!productOptionsJson) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(productOptionsJson);
+  } catch {
+    return null;
+  }
+  if (!parsed || Object.keys(parsed).length === 0) return null;
+
+  const parts = [];
+  for (const [key, value] of Object.entries(parsed)) {
+    const lowerKey = key.toLowerCase();
+    const label = lowerKey.includes("color")
+      ? "Colors"
+      : lowerKey.includes("size")
+      ? "Size"
+      : key;
+    const displayValue = Array.isArray(value) ? value.join(", ") : value;
+    if (displayValue) parts.push(`${label}: ${displayValue}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
 };
