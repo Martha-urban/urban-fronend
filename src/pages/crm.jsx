@@ -277,19 +277,41 @@ export default function CRM() {
 
   // ── Open convert modal ───────────────────────────────────────────────────────
   const openConvertModal = async (lead) => {
-    setSelectedLead(lead);
-    setQuantity(1);
-    setDeliveryCity(lead.location || "");
-    setDeliveryFee(0);
-    setDiscount(0);
-    setProductPrice(0);
     try {
       const res = await api.get("/api/v1/products/by-name", {
         params: { name: lead.formName },
       });
-      setProductPrice(res.data.sellingPrice || 0);
+      
+      if (!res.data || !res.data.sellingPrice) {
+        const notification = {
+          id: Date.now(),
+          title: "Product Not Available",
+          message: `The product "${lead.formName}" is not available in your inventory`,
+        };
+        setToasts((prev) => [...prev, notification]);
+        setTimeout(() => {
+          setToasts((prev) => prev.filter((t) => t.id !== notification.id));
+        }, 4000);
+        return;
+      }
+      
+      setSelectedLead(lead);
+      setQuantity(1);
+      setDeliveryCity(lead.location || "");
+      setDeliveryFee(0);
+      setDiscount(0);
+      setProductPrice(res.data.sellingPrice);
     } catch (err) {
       console.error("Failed to fetch product price", err);
+      const notification = {
+        id: Date.now(),
+        title: "Product Not Available",
+        message: `The product "${lead.formName}" is not available in your inventory`,
+      };
+      setToasts((prev) => [...prev, notification]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== notification.id));
+      }, 4000);
     }
   };
 
@@ -318,7 +340,12 @@ export default function CRM() {
       fetchLeads();
     } catch (err) {
       console.error(err);
-      alert("Conversion failed");
+      const errorMsg = err.response?.data?.message || err.message;
+      if (errorMsg && errorMsg.includes("product") && errorMsg.includes("not")) {
+        alert(`The product "${selectedLead.formName}" is not available in your inventory`);
+      } else {
+        alert("Conversion failed");
+      }
     } finally {
       setConverting(false);
     }
@@ -428,7 +455,7 @@ export default function CRM() {
                 </div>
                 <div>
                   <div className="text-gray-500">Extra Details</div>
-                  <div className="font-medium truncate">{lead.additionalInfo}</div>
+                  <div className="font-medium truncate">{lead.extraInfo}</div>
                 </div>
                 <div className="sm:col-span-2">
                   <div className="text-gray-500">Customer Notes</div>
