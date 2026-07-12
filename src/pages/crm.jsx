@@ -175,6 +175,20 @@ export default function CRM() {
   const [extraInfo, setExtraInfo] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
 
+  // Manual lead creation
+  const [showAddLeadModal, setShowAddLeadModal] = useState(false);
+  const [newLead, setNewLead] = useState({
+    name: "",
+    phoneNumber: "",
+    alternativePhoneNumber: "",
+    location: "",
+    formName: "",
+    additionalInfo: "",
+    notes: "",
+    source: "CALL",
+  });
+  const [savingLead, setSavingLead] = useState(false);
+
   // Toast notifications (live SSE popups)
   const [toasts, setToasts] = useState([]);
 
@@ -352,6 +366,38 @@ export default function CRM() {
     }
   };
 
+  // ── Create manual lead ───────────────────────────────────────────────────────
+  const createManualLead = async () => {
+    if (!newLead.name.trim() || !newLead.phoneNumber.trim()) {
+      alert("Name and phone number are required");
+      return;
+    }
+    try {
+      setSavingLead(true);
+      await api.post("/api/v1/leads/manual", newLead);
+      setShowAddLeadModal(false);
+      setNewLead({
+        name: "", phoneNumber: "", alternativePhoneNumber: "",
+        location: "", formName: "", additionalInfo: "", notes: "", source: "CALL",
+      });
+      fetchLeads();
+      const successToast = {
+        id: Date.now(),
+        title: "Lead Created",
+        message: `Lead "${newLead.name}" has been added successfully`,
+      };
+      setToasts((prev) => [...prev, successToast]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== successToast.id));
+      }, 4000);
+    } catch (err) {
+      console.error("Failed to create lead", err);
+      alert(err.response?.data?.message || "Failed to create lead");
+    } finally {
+      setSavingLead(false);
+    }
+  };
+
   // ── Computed totals for modal ────────────────────────────────────────────────
   const safeQuantity = Number(quantity) > 0 ? Number(quantity) : 1;
   const subtotal = safeQuantity * Number(productPrice);
@@ -380,7 +426,16 @@ export default function CRM() {
       {/* ── Header with Bell ── */}
       <div className="flex items-center justify-between mb-6 gap-3">
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold truncate">CRM Dashboard</h1>
-        <NotificationBell onNavigate={handleNotificationNavigate} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddLeadModal(true)}
+            className="bg-green-600 text-white rounded-full w-9 h-9 flex items-center justify-center text-xl font-bold hover:bg-green-700 transition-colors"
+            title="Add lead"
+          >
+            +
+          </button>
+          <NotificationBell onNavigate={handleNotificationNavigate} />
+        </div>
       </div>
 
       {/* ── Stats ── */}
@@ -819,6 +874,80 @@ export default function CRM() {
                 disabled={converting || productPrice === 0}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium disabled:opacity-50 hover:bg-green-700 transition-colors">
                 {converting ? "Converting..." : "Confirm Convert"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD LEAD MODAL ── */}
+      {showAddLeadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-lg shadow-2xl w-full max-w-sm p-5 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold mb-4">Add Lead</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-gray-600">Source</label>
+                <select
+                  value={newLead.source}
+                  onChange={(e) => setNewLead((p) => ({ ...p, source: e.target.value }))}
+                  className="w-full border rounded p-2 mt-1"
+                >
+                  <option value="CALL">Phone call</option>
+                  <option value="WHATSAPP">WhatsApp</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Name *</label>
+                <input type="text" value={newLead.name}
+                  onChange={(e) => setNewLead((p) => ({ ...p, name: e.target.value }))}
+                  className="w-full border rounded p-2 mt-1" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Phone Number *</label>
+                <input type="text" value={newLead.phoneNumber}
+                  onChange={(e) => setNewLead((p) => ({ ...p, phoneNumber: e.target.value }))}
+                  className="w-full border rounded p-2 mt-1" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Alternative Phone</label>
+                <input type="text" value={newLead.alternativePhoneNumber}
+                  onChange={(e) => setNewLead((p) => ({ ...p, alternativePhoneNumber: e.target.value }))}
+                  className="w-full border rounded p-2 mt-1" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Product</label>
+                <input type="text" value={newLead.formName}
+                  onChange={(e) => setNewLead((p) => ({ ...p, formName: e.target.value }))}
+                  className="w-full border rounded p-2 mt-1" placeholder="e.g. Car jack" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Location</label>
+                <input type="text" value={newLead.location}
+                  onChange={(e) => setNewLead((p) => ({ ...p, location: e.target.value }))}
+                  className="w-full border rounded p-2 mt-1" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Additional Info</label>
+                <textarea rows={2} value={newLead.additionalInfo}
+                  onChange={(e) => setNewLead((p) => ({ ...p, additionalInfo: e.target.value }))}
+                  className="w-full border rounded p-2 mt-1" />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Notes</label>
+                <textarea rows={2} value={newLead.notes}
+                  onChange={(e) => setNewLead((p) => ({ ...p, notes: e.target.value }))}
+                  className="w-full border rounded p-2 mt-1" />
+              </div>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
+              <button onClick={() => setShowAddLeadModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={createManualLead} disabled={savingLead}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium disabled:opacity-50 hover:bg-green-700 transition-colors">
+                {savingLead ? "Saving..." : "Add Lead"}
               </button>
             </div>
           </div>
