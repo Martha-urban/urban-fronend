@@ -576,7 +576,7 @@ export default function CRM() {
                 <td className="p-3">{lead.phoneNumber}</td>
                 <td className="p-3">{lead.formName}</td>
                 <td className="p-3">{lead.location}</td>
-                <td className="p-3">{lead.extraInfo || "—"}</td>
+                <td className="p-3">{lead.additionalInfo || "—"}</td>
                 <td className="p-3">
                   <textarea
                     rows={2}
