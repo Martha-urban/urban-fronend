@@ -1,10 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { NavLink } from "react-router-dom";
-import LogoutModal from "../pages/logoutModal";
 
-export default function Sidebar({ onClose, mobile = false }) {
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-
+export default function Sidebar({ onClose, mobile = false, onShowLogoutModal }) {
   const linkClass = ({ isActive }) =>
     `block px-4 py-3 rounded-xl transition font-medium
      ${
@@ -82,7 +79,7 @@ export default function Sidebar({ onClose, mobile = false }) {
           {/* ✅ Logout triggers modal */}
           <button
             onClick={() => {
-              setShowLogoutModal(true);
+              onShowLogoutModal();
               if (onClose) onClose();
             }}
             className="block w-full text-left px-4 py-3 rounded-xl transition font-medium text-white/80 hover:bg-white/5"
@@ -91,12 +88,6 @@ export default function Sidebar({ onClose, mobile = false }) {
           </button>
         </nav>
       </aside>
-
-      {/* ✅ Modal mounted here */}
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-      />
     </>
   );
 }
