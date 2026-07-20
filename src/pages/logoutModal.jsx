@@ -57,9 +57,18 @@ export default function LogoutModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white w-[400px] rounded-xl p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Logout Checklist</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[9999] p-3 sm:p-4">
+      <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-xl p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+        {/* Header with close button */}
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold">Logout Checklist</h2>
+          <button
+            onClick={onClose}
+            className="sm:hidden text-2xl font-bold text-gray-400 hover:text-gray-600"
+          >
+            ✕
+          </button>
+        </div>
 
         {/* Orders */}
         <div>
