@@ -16,8 +16,8 @@ import {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [from, setFrom] = useState("2026-02-01");
-  const [to, setTo] = useState("2026-02-28");
+  const [from, setFrom] = useState("2026-01-01");
+  const [to, setTo] = useState("2026-12-31");
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
