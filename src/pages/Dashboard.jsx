@@ -36,7 +36,6 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState(0);
   const [netProfit, setNetProfit] = useState(0);
 
-  // Demo chart based on net profit (until we build real daily breakdown)
   const profitData = useMemo(() => {
     const value = Number(netProfit || 0);
 
