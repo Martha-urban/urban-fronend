@@ -47,6 +47,13 @@ export default function StaffLogs() {
     fetchLogs();
   }, [from, to]);
 
+  // 🔃 Newest first
+  const sortedLogs = useMemo(() => {
+    return [...logs].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    );
+  }, [logs]);
+
   // 📊 Stats
   const stats = useMemo(() => {
     const total = logs.length;
@@ -93,11 +100,11 @@ export default function StaffLogs() {
     return "#151920";
   };
 
-  // 📄 Pagination
-  const totalPages = Math.ceil(logs.length / ITEMS_PER_PAGE);
+  // 📄 Pagination (newest logs first)
+  const totalPages = Math.ceil(sortedLogs.length / ITEMS_PER_PAGE);
   const startIdx = (page - 1) * ITEMS_PER_PAGE;
   const endIdx = startIdx + ITEMS_PER_PAGE;
-  const paginatedLogs = logs.slice(startIdx, endIdx);
+  const paginatedLogs = sortedLogs.slice(startIdx, endIdx);
 
   return (
     <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6">
@@ -162,7 +169,7 @@ export default function StaffLogs() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="p-4 text-center text-gray-500">Loading...</div>
-        ) : logs.length === 0 ? (
+        ) : sortedLogs.length === 0 ? (
           <div className="p-4 text-center text-gray-500">No logs found</div>
         ) : (
           <div className="overflow-x-auto">
@@ -230,11 +237,11 @@ export default function StaffLogs() {
       </div>
 
       {/* Pagination */}
-      {logs.length > 0 && (
+      {sortedLogs.length > 0 && (
         <div className="mt-6 px-3 sm:px-4 py-3 bg-white rounded-lg shadow-sm border border-gray-100">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="text-xs sm:text-sm text-gray-600">
-              Showing {startIdx + 1} to {Math.min(endIdx, logs.length)} of {logs.length}
+              Showing {startIdx + 1} to {Math.min(endIdx, sortedLogs.length)} of {sortedLogs.length}
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-1 sm:gap-2">
               <button
