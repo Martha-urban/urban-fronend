@@ -16,8 +16,8 @@ import {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [from, setFrom] = useState("2026-01-01");
-  const [to, setTo] = useState("2026-12-31");
+  const [from, setFrom] = useState("2026-02-01");
+  const [to, setTo] = useState("2026-12-28");
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
@@ -36,6 +36,11 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState(0);
   const [netProfit, setNetProfit] = useState(0);
 
+  // Now backed by real API data
+  const [topSelling, setTopSelling] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
+
+  // Demo chart based on net profit (until we build real daily breakdown)
   const profitData = useMemo(() => {
     const value = Number(netProfit || 0);
 
@@ -49,20 +54,6 @@ export default function Dashboard() {
       { name: "Sun", profit: Math.round(value * 0.1) },
     ];
   }, [netProfit]);
-
-  // Still static for now
-  const topSelling = [
-    { name: "Casual Sneakers", qty: 350 },
-    { name: "Denim Jacket", qty: 330 },
-    { name: "Sports Watch", qty: 320 },
-  ];
-
-  // Still static for now
-  const recentOrders = [
-    { customer: "Emily Johnson", date: "25 Feb", amount: 500 },
-    { customer: "Michael Brown", date: "24 Feb", amount: 1200 },
-    { customer: "Sophia Lee", date: "23 Feb", amount: 800 },
-  ];
 
   useEffect(() => {
     loadDashboard();
@@ -134,6 +125,43 @@ export default function Dashboard() {
       setGrossProfit(Number(rep.grossProfit || 0));
       setExpenses(Number(rep.expenses || 0));
       setNetProfit(Number(rep.netProfit || 0));
+
+      // 3) Top Selling Products
+      // Backend expects plain LocalDate (yyyy-MM-dd), which `from`/`to` already are.
+      const topSellingRes = await api.get("/api/v1/orders/dashboard/top-selling", {
+        params: { from, to, limit: 5 },
+      });
+
+      setTopSelling(
+        (topSellingRes.data || []).map((p) => ({
+          id: p.productId,
+          name: p.productName,
+          qty: Number(p.totalQuantity || 0),
+        }))
+      );
+
+      // 4) Recent Orders
+      // Reuses the same orders list endpoint, just page size 3, newest first.
+      // NOTE: field mapping (customerName / createdAt / totalAmount) is a best guess
+      // based on convention — confirm against the real order object shape and adjust
+      // if the backend uses different field names.
+      const recentRes = await api.get("/api/v1/orders", {
+        params: { page: 0, size: 3, sort: "createdAt,desc" },
+      });
+
+      setRecentOrders(
+        (recentRes.data.content || []).map((o) => ({
+          id: o.id,
+          customer: o.customerName || o.customer?.name || "Unknown",
+          date: o.createdAt
+            ? new Date(o.createdAt).toLocaleDateString("en-KE", {
+                day: "2-digit",
+                month: "short",
+              })
+            : "—",
+          amount: Number(o.totalAmount || 0),
+        }))
+      );
     } catch (e) {
       console.log(e);
       if (e.response?.status === 403) {
@@ -301,27 +329,29 @@ export default function Dashboard() {
               Top Selling Products
             </h3>
 
-            <div className="text-slate-500 text-sm mb-3">
-              (We will integrate real top products next)
-            </div>
-
             <div className="flex flex-col gap-3">
-              {topSelling.map((p, index) => (
-                <div
-                  key={p.name}
-                  className={`flex justify-between items-center pb-3 ${
-                    index === topSelling.length - 1
-                      ? ""
-                      : "border-b border-slate-100"
-                  }`}
-                >
-                  <div className="flex gap-3">
-                    <strong className="w-5">{index + 1}.</strong>
-                    <span>{p.name}</span>
-                  </div>
-                  <span className="font-bold">{p.qty}</span>
+              {topSelling.length === 0 ? (
+                <div className="text-sm text-slate-500">
+                  No sales in this period
                 </div>
-              ))}
+              ) : (
+                topSelling.map((p, index) => (
+                  <div
+                    key={p.id}
+                    className={`flex justify-between items-center pb-3 ${
+                      index === topSelling.length - 1
+                        ? ""
+                        : "border-b border-slate-100"
+                    }`}
+                  >
+                    <div className="flex gap-3">
+                      <strong className="w-5">{index + 1}.</strong>
+                      <span>{p.name}</span>
+                    </div>
+                    <span className="font-bold">{p.qty}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -331,28 +361,28 @@ export default function Dashboard() {
               Recent Orders
             </h3>
 
-            <div className="text-slate-500 text-sm mb-3">
-              (We will integrate real recent orders next)
-            </div>
-
             <div className="flex flex-col gap-3">
-              {recentOrders.map((o, idx) => (
-                <div
-                  key={idx}
-                  className={`flex justify-between pb-3 ${
-                    idx === recentOrders.length - 1
-                      ? ""
-                      : "border-b border-slate-100"
-                  }`}
-                >
-                  <div>
-                    <div className="font-semibold">{o.customer}</div>
-                    <div className="text-slate-500 text-sm">{o.date}</div>
-                  </div>
+              {recentOrders.length === 0 ? (
+                <div className="text-sm text-slate-500">No recent orders</div>
+              ) : (
+                recentOrders.map((o, idx) => (
+                  <div
+                    key={o.id}
+                    className={`flex justify-between pb-3 ${
+                      idx === recentOrders.length - 1
+                        ? ""
+                        : "border-b border-slate-100"
+                    }`}
+                  >
+                    <div>
+                      <div className="font-semibold">{o.customer}</div>
+                      <div className="text-slate-500 text-sm">{o.date}</div>
+                    </div>
 
-                  <div className="font-bold">{money(o.amount)}</div>
-                </div>
-              ))}
+                    <div className="font-bold">{money(o.amount)}</div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
