@@ -492,7 +492,22 @@ export default function CRM() {
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-base truncate">{lead.name}</div>
-                  <div className="text-xs text-gray-500 truncate">{lead.phoneNumber}</div>
+                  {lead.phoneNumber && (
+                    <a
+                      href={formatPhoneLink(lead.phoneNumber)}
+                      className="block text-xs text-blue-600 hover:underline truncate"
+                    >
+                      {lead.phoneNumber}
+                    </a>
+                  )}
+                  {lead.alternativePhoneNumber && (
+                    <a
+                      href={formatPhoneLink(lead.alternativePhoneNumber)}
+                      className="block text-xs text-blue-600 hover:underline truncate"
+                    >
+                      Alt Phone: {lead.alternativePhoneNumber}
+                    </a>
+                  )}
                 </div>
                 <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${statusColor}`}>
                   {lead.status}
@@ -647,6 +662,7 @@ export default function CRM() {
               <th className="p-3 text-left">Product</th>
               <th className="p-3 text-left">Options</th>
               <th className="p-3 text-left">Location</th>
+              <th className="p-3 text-left">Alt Phone No</th>
               <th className="p-3 text-left">Extra Details</th>
               <th className="p-3 text-left">Notes</th>
               <th className="p-3 text-left">Status</th>
@@ -663,10 +679,27 @@ export default function CRM() {
               className={`border-t hover:bg-gray-50 ${String(highlightedLeadId) === String(lead.id) ? "bg-green-50" : ""}`}
             >
                 <td className="p-3">{lead.name}</td>
-                <td className="p-3">{lead.phoneNumber}</td>
+                <td className="p-3">
+                  {lead.phoneNumber ? (
+                    <a href={formatPhoneLink(lead.phoneNumber)} className="text-blue-600 hover:underline">
+                      {lead.phoneNumber}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </td>
                 <td className="p-3">{lead.formName}</td>
                 <td className="p-3">{formatProductOptions(lead.productOptions) || "—"}</td>
                 <td className="p-3">{lead.location}</td>
+                <td className="p-3">
+                  {lead.alternativePhoneNumber ? (
+                    <a href={formatPhoneLink(lead.alternativePhoneNumber)} className="text-blue-600 hover:underline">
+                      {lead.alternativePhoneNumber}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </td>
                 <td className="p-3">{lead.additionalInfo || "—"}</td>
                 <td className="p-3">
                   <textarea
@@ -972,6 +1005,12 @@ const formatDateTime = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
   return `${date.toLocaleDateString("en-CA")} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+};
+
+const formatPhoneLink = (value) => {
+  if (!value) return "";
+  const cleaned = String(value).trim().replace(/[^\d+]/g, "");
+  return cleaned ? `tel:${cleaned}` : "";
 };
 
 const formatProductOptions = (productOptionsJson) => {
