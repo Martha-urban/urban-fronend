@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
@@ -73,6 +73,8 @@ export default function StaffDetailsPage() {
   const initials = fullName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
   const role = staff.role || "Staff";
   const joinedDate = staff.createdAt ? new Date(staff.createdAt).toLocaleDateString() : "N/A";
+  const assignableRoles = ["STAFF", "CASHIER"];
+  const canManageAssignments = isAdmin() && assignableRoles.includes(String(role).toUpperCase());
 
   const chartData = [
     { date: "Total", revenue: summary?.totalRevenue || 0, profit: summary?.totalProfit || 0 },
@@ -134,6 +136,11 @@ export default function StaffDetailsPage() {
             </div>
           </div>
         </div>
+
+        {/* PRODUCTS HANDLED */}
+        {canManageAssignments && (
+          <ProductsHandledCard targetId={targetId} staffName={fullName} />
+        )}
 
         {/* TODAY STATS ROW */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -287,6 +294,234 @@ export default function StaffDetailsPage() {
         </div>
 
       </div>
+    </div>
+  );
+}
+
+// ── Products handled card ────────────────────────────────────
+function normalizeId(value) {
+  return value == null ? null : String(value);
+}
+
+function normalizeAssignments(rawAssignments) {
+  const list = Array.isArray(rawAssignments)
+    ? rawAssignments
+    : Array.isArray(rawAssignments?.content)
+      ? rawAssignments.content
+      : Array.isArray(rawAssignments?.data)
+        ? rawAssignments.data
+        : Array.isArray(rawAssignments?.items)
+          ? rawAssignments.items
+          : Array.isArray(rawAssignments?.assignments)
+            ? rawAssignments.assignments
+            : [];
+
+  return list.map((assignment) => {
+    const product = assignment?.product ?? {};
+    const staff = assignment?.staff ?? {};
+    const productId = assignment?.productId ?? product?.id ?? assignment?.id ?? product?.productId;
+    const staffId = assignment?.staffId ?? staff?.id ?? assignment?.userId ?? assignment?.assignedStaffId ?? assignment?.assignedTo?.id;
+    const staffName = assignment?.staffName ?? [staff?.firstName, staff?.lastName].filter(Boolean).join(" ") ?? staff?.name ?? "";
+
+    return {
+      productId: productId != null ? normalizeId(productId) : null,
+      staffId: staffId != null ? normalizeId(staffId) : null,
+      staffName,
+    };
+  });
+}
+
+function ProductsHandledCard({ targetId, staffName }) {
+  const [products, setProducts] = useState([]);
+  const [assignments, setAssignments] = useState([]); // [{ productId, staffId, staffName }]
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pendingIds, setPendingIds] = useState(new Set());
+  const [selectedProductIds, setSelectedProductIds] = useState(new Set());
+  const selectedProductIdsRef = useRef(new Set());
+  const [hasChanges, setHasChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [productsRes, assignmentsRes] = await Promise.all([
+          api.get(`/api/v1/products`),
+          api.get(`/api/v1/products/staff-assignments`),
+        ]);
+
+        if (cancelled) return;
+
+        const normalizedAssignments = normalizeAssignments(assignmentsRes.data);
+        const normalizedTargetId = normalizeId(targetId);
+        const initialSelectedIds = new Set(
+          normalizedAssignments
+            .filter((assignment) => normalizeId(assignment.staffId) === normalizedTargetId)
+            .map((assignment) => normalizeId(assignment.productId))
+        );
+
+        setProducts(productsRes.data.content || productsRes.data || []);
+        setAssignments(normalizedAssignments);
+        setSelectedProductIds(initialSelectedIds);
+        selectedProductIdsRef.current = initialSelectedIds;
+        setHasChanges(false);
+      } catch (err) {
+        console.error("Error loading product assignments", err);
+        if (!cancelled) setError("Couldn't load products.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [targetId]);
+
+  useEffect(() => {
+    selectedProductIdsRef.current = selectedProductIds;
+  }, [selectedProductIds]);
+
+  const assignmentByProductId = new Map(
+    assignments.map(a => [normalizeId(a.productId), a])
+  );
+
+  function toggleProduct(productId) {
+    const normalizedProductId = normalizeId(productId);
+    setSelectedProductIds(prev => {
+      const next = new Set(prev);
+      if (next.has(normalizedProductId)) {
+        next.delete(normalizedProductId);
+      } else {
+        next.add(normalizedProductId);
+      }
+      selectedProductIdsRef.current = next;
+      return next;
+    });
+    setHasChanges(true);
+  }
+
+  async function saveAssignments() {
+    if (!hasChanges) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const normalizedTargetId = normalizeId(targetId);
+      const currentAssignedIds = new Set(
+        assignments
+          .filter((assignment) => normalizeId(assignment.staffId) === normalizedTargetId)
+          .map((assignment) => normalizeId(assignment.productId))
+      );
+
+      const operations = [];
+      const latestSelectedProductIds = selectedProductIdsRef.current;
+      for (const productId of products.map((product) => normalizeId(product.id))) {
+        const wasAssigned = currentAssignedIds.has(productId);
+        const willBeAssigned = latestSelectedProductIds.has(productId);
+
+        if (wasAssigned && !willBeAssigned) {
+          operations.push(api.delete(`/api/v1/products/${productId}/assign-staff`));
+        } else if (!wasAssigned && willBeAssigned) {
+          operations.push(api.post(`/api/v1/products/${productId}/assign-staff`, { staffId: targetId }));
+        }
+      }
+
+      await Promise.all(operations);
+
+      const refreshedAssignmentsRes = await api.get(`/api/v1/products/staff-assignments`);
+      const refreshedAssignments = normalizeAssignments(refreshedAssignmentsRes.data);
+      const refreshedSelectedIds = new Set(
+        refreshedAssignments
+          .filter((assignment) => normalizeId(assignment.staffId) === normalizedTargetId)
+          .map((assignment) => normalizeId(assignment.productId))
+      );
+
+      setAssignments(refreshedAssignments);
+      setSelectedProductIds(refreshedSelectedIds);
+      selectedProductIdsRef.current = refreshedSelectedIds;
+      setHasChanges(false);
+    } catch (err) {
+      console.error("Error saving product assignments", err);
+      setError("Couldn't save product assignments. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-gray-800">Products handled</h3>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400">
+            {Array.from(selectedProductIds).length} selected
+          </span>
+          <button
+            type="button"
+            onClick={saveAssignments}
+            disabled={!hasChanges || saving}
+            className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {saving ? "Saving..." : "Save changes"}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-4 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center py-6 text-gray-400 text-sm">Loading products...</div>
+      ) : products.length === 0 ? (
+        <div className="text-center py-6 text-gray-400 text-sm">No products found.</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {products.map((p) => {
+            const normalizedProductId = normalizeId(p.id);
+            const assignment = assignmentByProductId.get(normalizedProductId);
+            const isSelected = selectedProductIds.has(normalizedProductId);
+            const isAssignedToTarget = isSelected;
+            const isAssignedToOther = Boolean(assignment && normalizeId(assignment.staffId) !== normalizeId(targetId) && !isSelected);
+            const isPending = pendingIds.has(p.id);
+
+            return (
+              <label
+                key={p.id}
+                className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
+                  isAssignedToTarget
+                    ? "border-blue-200 bg-blue-50"
+                    : "border-gray-100 hover:bg-gray-50"
+                } ${isPending ? "opacity-50 pointer-events-none" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={isSelected}
+                  disabled={saving}
+                  onChange={() => toggleProduct(p.id)}
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
+                  {isAssignedToOther && (
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      Currently with {assignment.staffName || "another staff member"}
+                    </p>
+                  )}
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
