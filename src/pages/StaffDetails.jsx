@@ -341,20 +341,21 @@ function ProductsHandledCard({ targetId, staffName }) {
   const selectedProductIdsRef = useRef(new Set());
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 30;
+
+  // Assignments are loaded once (needed in full for diffing on save)
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function loadAssignments() {
       try {
-        setLoading(true);
-        setError(null);
-
-        const [productsRes, assignmentsRes] = await Promise.all([
-          api.get(`/api/v1/products`),
-          api.get(`/api/v1/products/staff-assignments`),
-        ]);
-
+        const assignmentsRes = await api.get(`/api/v1/products/staff-assignments`);
         if (cancelled) return;
 
         const normalizedAssignments = normalizeAssignments(assignmentsRes.data);
@@ -365,7 +366,6 @@ function ProductsHandledCard({ targetId, staffName }) {
             .map((assignment) => normalizeId(assignment.productId))
         );
 
-        setProducts(productsRes.data.content || productsRes.data || []);
         setAssignments(normalizedAssignments);
         setSelectedProductIds(initialSelectedIds);
         selectedProductIdsRef.current = initialSelectedIds;
@@ -373,14 +373,52 @@ function ProductsHandledCard({ targetId, staffName }) {
       } catch (err) {
         console.error("Error loading product assignments", err);
         if (!cancelled) setError("Couldn't load products.");
+      }
+    }
+
+    loadAssignments();
+    return () => { cancelled = true; };
+  }, [targetId]);
+
+  // Products are loaded per page, refetched on page or search change
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const productsRes = await api.get(`/api/v1/products`, {
+          params: {
+            page,
+            size: pageSize,
+            ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
+          },
+        });
+
+        if (cancelled) return;
+
+        const data = productsRes.data;
+        setProducts(data.content || data || []);
+        setTotalPages(data.totalPages ?? 0);
+        setTotalElements(data.totalElements ?? (data.content || data || []).length);
+      } catch (err) {
+        console.error("Error loading products", err);
+        if (!cancelled) setError("Couldn't load products.");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
-    load();
+    loadProducts();
     return () => { cancelled = true; };
-  }, [targetId]);
+  }, [page, searchTerm]);
+
+  // Reset to page 1 whenever the search term changes
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm]);
 
   useEffect(() => {
     selectedProductIdsRef.current = selectedProductIds;
@@ -419,6 +457,8 @@ function ProductsHandledCard({ targetId, staffName }) {
           .map((assignment) => normalizeId(assignment.productId))
       );
 
+      // Only diffs the products currently loaded on this page —
+      // toggles only ever happen on visible checkboxes.
       const operations = [];
       const latestSelectedProductIds = selectedProductIdsRef.current;
       for (const productId of products.map((product) => normalizeId(product.id))) {
@@ -473,6 +513,25 @@ function ProductsHandledCard({ targetId, staffName }) {
         </div>
       </div>
 
+      <div className="mb-4 relative">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search products..."
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        {searchTerm && (
+          <button
+            type="button"
+            onClick={() => setSearchTerm("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       {error && (
         <div className="mb-4 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
           {error}
@@ -482,45 +541,74 @@ function ProductsHandledCard({ targetId, staffName }) {
       {loading ? (
         <div className="text-center py-6 text-gray-400 text-sm">Loading products...</div>
       ) : products.length === 0 ? (
-        <div className="text-center py-6 text-gray-400 text-sm">No products found.</div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {products.map((p) => {
-            const normalizedProductId = normalizeId(p.id);
-            const assignment = assignmentByProductId.get(normalizedProductId);
-            const isSelected = selectedProductIds.has(normalizedProductId);
-            const isAssignedToTarget = isSelected;
-            const isAssignedToOther = Boolean(assignment && normalizeId(assignment.staffId) !== normalizeId(targetId) && !isSelected);
-            const isPending = pendingIds.has(p.id);
-
-            return (
-              <label
-                key={p.id}
-                className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
-                  isAssignedToTarget
-                    ? "border-blue-200 bg-blue-50"
-                    : "border-gray-100 hover:bg-gray-50"
-                } ${isPending ? "opacity-50 pointer-events-none" : ""}`}
-              >
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  checked={isSelected}
-                  disabled={saving}
-                  onChange={() => toggleProduct(p.id)}
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
-                  {isAssignedToOther && (
-                    <p className="text-xs text-amber-600 mt-0.5">
-                      Currently with {assignment.staffName || "another staff member"}
-                    </p>
-                  )}
-                </div>
-              </label>
-            );
-          })}
+        <div className="text-center py-6 text-gray-400 text-sm">
+          {searchTerm ? `No products match "${searchTerm}".` : "No products found."}
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {products.map((p) => {
+              const normalizedProductId = normalizeId(p.id);
+              const assignment = assignmentByProductId.get(normalizedProductId);
+              const isSelected = selectedProductIds.has(normalizedProductId);
+              const isAssignedToTarget = isSelected;
+              const isAssignedToOther = Boolean(assignment && normalizeId(assignment.staffId) !== normalizeId(targetId) && !isSelected);
+              const isPending = pendingIds.has(p.id);
+
+              return (
+                <label
+                  key={p.id}
+                  className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
+                    isAssignedToTarget
+                      ? "border-blue-200 bg-blue-50"
+                      : "border-gray-100 hover:bg-gray-50"
+                  } ${isPending ? "opacity-50 pointer-events-none" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={isSelected}
+                    disabled={saving}
+                    onChange={() => toggleProduct(p.id)}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
+                    {isAssignedToOther && (
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        Currently with {assignment.staffName || "another staff member"}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+
+          {/* Pagination controls */}
+          <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-400">
+              Page {page + 1} of {Math.max(totalPages, 1)} &bull; {totalElements} products
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0 || saving}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1 || saving}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
