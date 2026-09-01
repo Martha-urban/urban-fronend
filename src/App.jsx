@@ -17,6 +17,7 @@ import Product from "./pages/Product";
 import Expenses from "./pages/Expense";
 import StaffDetails from "./pages/StaffDetails";
 import CRM from "./pages/crm";
+import Courier from "./pages/Courier";
 
 // Helper function to validate token presence and basic integrity
 const isAuthenticated = () => {
@@ -82,6 +83,7 @@ export default function App() {
         <Route path="/crm" element={<CRM />} />
         <Route path="/crm/leads/:id" element={<CRM />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/couriers" element={<Courier />} />
         <Route path="/requisitions" element={<RequisitionList />} />
         <Route path="/requisitions/new" element={<Requisition />} />
         <Route path="/categories" element={<Category />} />

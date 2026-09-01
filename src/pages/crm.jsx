@@ -175,6 +175,10 @@ export default function CRM() {
   const [extraInfo, setExtraInfo] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
 
+  // Couriers for the "pick a courier" dropdown on the convert modal
+  const [couriers, setCouriers] = useState([]);
+  const [selectedCourierId, setSelectedCourierId] = useState("");
+
   // Manual lead creation
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);
   const [newLead, setNewLead] = useState({
@@ -316,6 +320,17 @@ export default function CRM() {
       setDeliveryFee(0);
       setDiscount(0);
       setProductPrice(res.data.sellingPrice);
+      setSelectedCourierId("");
+
+      // Load active couriers for the picker (non-blocking - conversion still
+      // works fine if this fails or comes back empty)
+      try {
+        const courierRes = await api.get("/api/v1/couriers/active");
+        setCouriers(courierRes.data || []);
+      } catch (courierErr) {
+        console.error("Failed to load couriers", courierErr);
+        setCouriers([]);
+      }
     } catch (err) {
       console.error("Failed to fetch product price", err);
       const notification = {
@@ -350,8 +365,10 @@ export default function CRM() {
         deliveryFee: safeDeliveryFee,
         discount: safeDiscount,
         totalAmount,
+        courierId: selectedCourierId || undefined,
       });
       setSelectedLead(null);
+      setSelectedCourierId("");
       fetchLeads();
     } catch (err) {
       console.error(err);
@@ -897,9 +914,29 @@ export default function CRM() {
                   onChange={(e) => setDeliveryCity(e.target.value)}
                   className="w-full border rounded p-2 mt-1" />
               </div>
+              <div>
+                <label className="text-sm text-gray-600">Courier</label>
+                <select
+                  value={selectedCourierId}
+                  onChange={(e) => setSelectedCourierId(e.target.value)}
+                  className="w-full border rounded p-2 mt-1"
+                >
+                  <option value="">No courier (assign later)</option>
+                  {couriers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} — {c.phoneNumber}
+                    </option>
+                  ))}
+                </select>
+                {couriers.length === 0 && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    No active couriers found. Add one under the Couriers page.
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
-              <button onClick={() => setSelectedLead(null)}
+              <button onClick={() => { setSelectedLead(null); setSelectedCourierId(""); }}
                 className="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors">
                 Cancel
               </button>

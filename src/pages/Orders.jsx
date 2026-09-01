@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api/api";
+import { printReceiptToUSB } from "../utils/printer";
+
+const MPESA_PAYBILL = "522522";
 
 export default function Orders() {
   const [from, setFrom] = useState("2026-02-01");
@@ -31,6 +34,8 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [noteText, setNoteText] = useState("");
   const [noteError, setNoteError] = useState("");
+  const [receiptOrder, setReceiptOrder] = useState(null);
+  const [printingReceipt, setPrintingReceipt] = useState(false);
 
   // Quick Order form
   const [customerForm, setCustomerForm] = useState({
@@ -81,6 +86,32 @@ export default function Orders() {
     loadProducts();
     // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    if (!receiptOrder) return undefined;
+
+    let isMounted = true;
+
+    const printReceipt = async () => {
+      try {
+        setPrintingReceipt(true);
+        await printReceiptToUSB(receiptOrder, MPESA_PAYBILL);
+      } catch (e) {
+        console.error("Receipt print failed:", e);
+      } finally {
+        if (isMounted) {
+          setPrintingReceipt(false);
+          setReceiptOrder(null);
+        }
+      }
+    };
+
+    printReceipt();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [receiptOrder]);
 
   async function loadOrders() {
     try {
@@ -178,6 +209,44 @@ export default function Orders() {
       .replaceAll("_", " ")
       .toLowerCase()
       .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  // Return a color hex for highlighting rows/cards based on age and status
+  function getParcelAgeHighlight(order) {
+    if (!order) return null;
+    const createdAt = order.createdAt ? new Date(order.createdAt) : null;
+    if (!createdAt || isNaN(createdAt.getTime())) return null;
+
+    const days = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    const status = String(order.orderStatus || "").toUpperCase();
+
+    // Dispatched and paid: distinct color
+    if (status.includes("DISPATCHED") && status.includes("PAID")) {
+      return "#0ea5a4"; // teal for dispatched+paid
+    }
+
+    // Green: picked and paid (status includes PAID and is delivered/completed)
+    if (
+      status.includes("PAID") &&
+      (status.includes("DELIVERED") || status === "COMPLETED")
+    ) {
+      return "#16a34a"; // green
+    }
+
+    // Special: DISPATCHED but UNPAID -> show its own color initially,
+    // but after 7 days, if still not delivered/paid, fall through to age rules.
+    if (status.includes("DISPATCHED") && status.includes("UNPAID")) {
+      if (days < 7) return "#1d4ed8"; // blue for recently dispatched-unpaid
+      // else allow fallthrough so days>=7 becomes orange, >=14 becomes red
+    }
+
+    // Red: more than or equal to 14 days and not collected/paid
+    if (days >= 14) return "#dc2626"; // red
+
+    // Orange: more than or equal to 7 days and not collected/paid
+    if (days >= 7) return "#f97316"; // orange
+
+    return null;
   }
 
   function handleCustomerChange(e) {
@@ -354,6 +423,10 @@ export default function Orders() {
       closeEditModal();
       await loadOrders();
 
+      if (editStatus === "DISPATCHED_UNPAID") {
+        setReceiptOrder({ ...editingOrder, orderStatus: editStatus });
+      }
+
       alert("Order status updated!");
     } catch (e) {
       console.log(e);
@@ -449,6 +522,121 @@ export default function Orders() {
         @media (min-width: 769px) {
           .mobile-card {
             display: none;
+          }
+        }
+
+        .print-receipt {
+          display: none;
+        }
+
+        .receipt-paper {
+          width: 80mm;
+          box-sizing: border-box;
+          padding: 8mm;
+          color: #111827;
+          background: #fff;
+          font-family: Arial, sans-serif;
+          font-size: 12px;
+        }
+
+        .receipt-header {
+          text-align: center;
+          border-bottom: 2px solid #111827;
+          padding-bottom: 10px;
+          margin-bottom: 12px;
+        }
+
+        .receipt-header h1 {
+          margin: 0;
+          font-size: 20px;
+          letter-spacing: 1px;
+        }
+
+        .receipt-title {
+          margin: 5px 0 0;
+          font-size: 11px;
+          text-transform: uppercase;
+          color: #4b5563;
+        }
+
+        .receipt-section {
+          border-bottom: 1px dashed #9ca3af;
+          padding: 4px 0 8px;
+          margin-bottom: 8px;
+        }
+
+        .receipt-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          margin: 6px 0;
+        }
+
+        .receipt-row strong:last-child {
+          text-align: right;
+          overflow-wrap: anywhere;
+        }
+
+        .receipt-total {
+          font-size: 15px;
+          font-weight: 800;
+          border-top: 2px solid #111827;
+          padding-top: 9px;
+        }
+
+        .receipt-payment {
+          background: #f3f4f6;
+          padding: 9px;
+          margin-top: 10px;
+        }
+
+        .receipt-payment-value {
+          font-size: 18px !important;
+        }
+
+        .receipt-footer {
+          text-align: center;
+          margin-top: 14px;
+          color: #4b5563;
+          font-size: 11px;
+        }
+
+        @media print {
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+
+          html,
+          body,
+          #root {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            width: 80mm !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          #root > *:not(.print-receipt) {
+            display: none !important;
+            visibility: hidden !important;
+          }
+
+          .print-receipt,
+          .print-receipt * {
+            visibility: visible !important;
+          }
+
+          .print-receipt {
+            display: block !important;
+            position: static !important;
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
         }
       `}</style>
@@ -580,6 +768,7 @@ export default function Orders() {
         {!loading &&
           orders.map((o, idx) => {
             const s = statusStyle(o.orderStatus);
+            const highlight = getParcelAgeHighlight(o);
 
             return (
               <React.Fragment key={o.id}>
@@ -594,6 +783,7 @@ export default function Orders() {
                     borderTop: idx === 0 ? "none" : "1px solid #f3f4f6",
                     alignItems: "center",
                     fontSize: 14,
+                    borderLeft: highlight ? `6px solid ${highlight}` : undefined,
                   }}
                 >
                   <div style={{ color: "#374151" }}>
@@ -662,7 +852,7 @@ export default function Orders() {
                 </div>
 
                 {/* Mobile card */}
-                <div className="mobile-card">
+                <div className="mobile-card" style={{ borderLeft: highlight ? `6px solid ${highlight}` : undefined }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
                     <div>
                       <div style={{ fontWeight: 900, fontSize: 16 }}>
@@ -1167,6 +1357,75 @@ export default function Orders() {
           </div>
         </div>
       )}
+
+      {receiptOrder && (
+        <div id="receipt-print-root" className="print-receipt" aria-hidden="true">
+          <div className="receipt-paper">
+            <div className="receipt-header">
+              <h1>URBAN TRENDS</h1>
+              <div className="receipt-title">Dispatch Receipt</div>
+            </div>
+
+            <div className="receipt-section">
+              <div className="receipt-row">
+                <strong>Order</strong>
+                <strong>{String(receiptOrder.id || "").slice(0, 8).toUpperCase()}</strong>
+              </div>
+              <div className="receipt-row">
+                <span>Date</span>
+                <span>{formatDateTime(receiptOrder.createdAt)}</span>
+              </div>
+              <div className="receipt-row">
+                <span>Status</span>
+                <span>{niceStatus(receiptOrder.orderStatus)}</span>
+              </div>
+            </div>
+
+            <div className="receipt-section">
+              <div className="receipt-row">
+                <span>Customer</span>
+                <strong>{receiptOrder.customerName || "-"}</strong>
+              </div>
+              <div className="receipt-row">
+                <span>Phone</span>
+                <strong>{receiptOrder.phoneNumber || "-"}</strong>
+              </div>
+              <div className="receipt-row">
+                <span>City</span>
+                <strong>{receiptOrder.deliveryCity || "-"}</strong>
+              </div>
+            </div>
+
+            <div className="receipt-section">
+              <div className="receipt-row">
+                <span>Product</span>
+                <strong>{receiptOrder.productName || "-"}</strong>
+              </div>
+              <div className="receipt-row receipt-total">
+                <span>Amount Due</span>
+                <span>{formatMoney(receiptOrder.totalAmount)}</span>
+              </div>
+            </div>
+
+            <div className="receipt-payment">
+              <div className="receipt-row">
+                <span>M-Pesa Paybill</span>
+                <strong>{MPESA_PAYBILL}</strong>
+              </div>
+              <div className="receipt-row">
+                <span>Account No</span>
+                <strong>{receiptOrder.accountNumber || "Use order number"}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {printingReceipt && (
+        <div style={{ position: "fixed", right: 16, bottom: 16, background: "#111827", color: "#fff", padding: "10px 14px", borderRadius: 12, fontWeight: 700, zIndex: 1001 }}>
+          Printing receipt...
+        </div>
+      )}
     </div>
   );
 }
@@ -1321,3 +1580,4 @@ const noteBtn = {
   fontWeight: 900,
   fontSize: 12,
 };
+

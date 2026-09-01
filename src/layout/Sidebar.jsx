@@ -44,6 +44,10 @@ export default function Sidebar({ onClose, mobile = false, onShowLogoutModal }) 
             Orders
           </NavLink>
 
+          <NavLink to="/couriers" className={linkClass} onClick={onClose}>
+            Courier
+          </NavLink>
+
           <NavLink to="/requisitions" className={linkClass} onClick={onClose}>
             Requisitions
           </NavLink>
