@@ -428,6 +428,15 @@ function ProductsHandledCard({ targetId, staffName }) {
     assignments.map(a => [normalizeId(a.productId), a])
   );
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredProducts = normalizedSearch
+    ? products.filter((product) =>
+        [product.name, product.sku].some((value) =>
+          String(value || "").toLowerCase().includes(normalizedSearch)
+        )
+      )
+    : products;
+
   function toggleProduct(productId) {
     const normalizedProductId = normalizeId(productId);
     setSelectedProductIds(prev => {
@@ -540,14 +549,14 @@ function ProductsHandledCard({ targetId, staffName }) {
 
       {loading ? (
         <div className="text-center py-6 text-gray-400 text-sm">Loading products...</div>
-      ) : products.length === 0 ? (
+      ) : filteredProducts.length === 0 ? (
         <div className="text-center py-6 text-gray-400 text-sm">
           {searchTerm ? `No products match "${searchTerm}".` : "No products found."}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {products.map((p) => {
+            {filteredProducts.map((p) => {
               const normalizedProductId = normalizeId(p.id);
               const assignment = assignmentByProductId.get(normalizedProductId);
               const isSelected = selectedProductIds.has(normalizedProductId);
