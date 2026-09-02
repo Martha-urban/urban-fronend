@@ -32,11 +32,16 @@ export default function Products() {
     categoryId: "",
   });
 
-  // Load products on mount + page change
+  // Load products on mount, page change, or search change
   useEffect(() => {
     loadProducts();
     // eslint-disable-next-line
-  }, [page]);
+  }, [page, search]);
+
+  // Search results should always start from the first page.
+  useEffect(() => {
+    setPage(0);
+  }, [search]);
 
   // Load categories once (for select dropdown)
   useEffect(() => {
@@ -54,6 +59,7 @@ export default function Products() {
           page,
           size,
           sort: "createdAt,desc",
+          ...(search.trim() ? { search: search.trim() } : {}),
         },
       });
 
@@ -82,25 +88,6 @@ export default function Products() {
       console.log(e);
     }
   }
-
-  const filtered = useMemo(() => {
-    return products.filter((p) => {
-      const q = search.toLowerCase();
-
-      const categoryName =
-        p.category?.name ||
-        categories.find((c) => c.id === p.categoryId)?.name ||
-        "";
-
-      return (
-        (p.name || "").toLowerCase().includes(q) ||
-        (p.sku || "").toLowerCase().includes(q) ||
-        String(p.sellingPrice || "").toLowerCase().includes(q) ||
-        String(p.costPrice || "").toLowerCase().includes(q) ||
-        categoryName.toLowerCase().includes(q)
-      );
-    });
-  }, [products, search, categories]);
 
   function openAddModal() {
     setForm({
@@ -350,7 +337,7 @@ export default function Products() {
         </div>
 
         {/* Rows */}
-        {filtered.map((p, idx) => (
+        {products.map((p, idx) => (
           <React.Fragment key={p.id}>
             {/* Desktop row */}
             <div
@@ -439,8 +426,10 @@ export default function Products() {
           </React.Fragment>
         ))}
 
-        {filtered.length === 0 && (
-          <div style={{ padding: 16, color: "#6b7280" }}>No products found.</div>
+        {products.length === 0 && (
+          <div style={{ padding: 16, color: "#6b7280" }}>
+            {search.trim() ? `No products match "${search}".` : "No products found."}
+          </div>
         )}
 
         {/* Footer pagination */}
@@ -459,7 +448,7 @@ export default function Products() {
             }}
           >
             <div>
-              Showing {filtered.length} of {pageData.totalElements} products
+              Showing {products.length} of {pageData.totalElements} products
             </div>
 
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>

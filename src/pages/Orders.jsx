@@ -431,7 +431,7 @@ export default function Orders() {
     } catch (e) {
       console.log(e);
       setError("Failed to update status.");
-      alert("Failed to update status. Check console.");
+      alert("Failed to update status. check your inventory");
     } finally {
       setLoading(false);
     }
