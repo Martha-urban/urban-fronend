@@ -220,7 +220,7 @@ export default function Products() {
       await loadProducts();
     } catch (e) {
       console.log(e);
-      alert("Failed to update product. Check console.");
+      alert("you dont have permission to add product");
     } finally {
       setLoading(false);
     }
