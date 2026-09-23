@@ -93,7 +93,7 @@ export default function Products() {
 
   function openAddModal() {
     if (!can("CAN_CREATE_PRODUCTS")) {
-      alert("You don't have permission to add product.");
+      setError("You don't have permission to add product.");
       return;
     }
 
@@ -177,11 +177,11 @@ export default function Products() {
       setPage(0);
       await loadProducts();
     } catch (e) {
-      console.log(e);
+      console.error("Failed to add product:", e);
       if (e.response?.status === 403) {
-        alert("You don't have permission to add product.");
+        setError("You don't have permission to add product.");
       } else {
-        alert("Failed to add product. Check console.");
+        setError("Failed to add product. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -219,8 +219,12 @@ export default function Products() {
       closeEditModal();
       await loadProducts();
     } catch (e) {
-      console.log(e);
-      alert("you dont have permission to add product");
+      console.error("Failed to update product:", e);
+      if (e.response?.status === 403) {
+        setError("You don't have permission to edit product.");
+      } else {
+        setError("Failed to update product. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
