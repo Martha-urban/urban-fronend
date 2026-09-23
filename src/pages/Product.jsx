@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api/api"; // adjust if needed
+import { useAuth } from "../auth/useAuth";
 
 export default function Products() {
+  const { can } = useAuth();
   const [search, setSearch] = useState("");
 
   // Backend state
@@ -90,6 +92,11 @@ export default function Products() {
   }
 
   function openAddModal() {
+    if (!can("CAN_CREATE_PRODUCTS")) {
+      alert("You don't have permission to add product.");
+      return;
+    }
+
     setForm({
       name: "",
       sku: "",
@@ -171,7 +178,11 @@ export default function Products() {
       await loadProducts();
     } catch (e) {
       console.log(e);
-      alert("Failed to add product. Check console.");
+      if (e.response?.status === 403) {
+        alert("You don't have permission to add product.");
+      } else {
+        alert("Failed to add product. Check console.");
+      }
     } finally {
       setLoading(false);
     }
