@@ -49,8 +49,11 @@ export default function LogoutModal({ isOpen, onClose }) {
       // 4. redirect
       navigate("/login");
     } catch (error) {
-      console.error(error);
-      alert("Logout failed. Try again.");
+      console.error("Logout request failed:", error);
+      alert(
+        error.response?.data?.message ||
+          "Logout failed. Check that the backend is running and try again."
+      );
     } finally {
       setLoading(false);
     }
