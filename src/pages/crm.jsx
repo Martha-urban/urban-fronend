@@ -321,14 +321,52 @@ export default function CRM() {
     }
   };
 
+  const refreshProductsForConversion = useCallback(async (leadProductName = "") => {
+    try {
+      const productsRes = await api.get("/api/v1/products", {
+        params: { page: 0, size: 200, sort: "name,asc" },
+      });
+      const availableProducts = productsRes.data.content || [];
+
+      if (leadProductName) {
+        const matchingProduct = availableProducts.find(
+          (product) => String(product.name).trim().toLowerCase() === String(leadProductName).trim().toLowerCase()
+        );
+
+        if (matchingProduct) {
+          setProductsForConversion((current) => {
+            const merged = [...availableProducts];
+            if (!merged.some((product) => String(product.id) === String(matchingProduct.id))) {
+              merged.unshift(matchingProduct);
+            }
+            return merged;
+          });
+          return matchingProduct;
+        }
+      }
+
+      setProductsForConversion(availableProducts);
+      return availableProducts[0] || null;
+    } catch (productsErr) {
+      console.error("Failed to load products for conversion", productsErr);
+      setProductsForConversion([]);
+      return null;
+    }
+  }, []);
+
   // ── Open convert modal ───────────────────────────────────────────────────────
   const openConvertModal = async (lead) => {
     try {
-      const res = await api.get("/api/v1/products/by-name", {
-        params: { name: lead.formName },
-      });
-      
-      if (!res.data || !res.data.sellingPrice) {
+      setSelectedLead(lead);
+      setDeliveryCity(lead.location || "");
+      setDeliveryFee(0);
+      setDiscount(0);
+      setProductPickerMode("");
+      setPickerProductId("");
+      setSelectedCourierId("");
+
+      const latestProduct = await refreshProductsForConversion(lead.formName);
+      if (!latestProduct || !Number(latestProduct.sellingPrice) && Number(latestProduct.sellingPrice) !== 0) {
         const notification = {
           id: Date.now(),
           title: "Product Not Available",
@@ -338,43 +376,19 @@ export default function CRM() {
         setTimeout(() => {
           setToasts((prev) => prev.filter((t) => t.id !== notification.id));
         }, 4000);
+        setConversionItems([]);
         return;
       }
-      
-      setSelectedLead(lead);
-      setDeliveryCity(lead.location || "");
-      setDeliveryFee(0);
-      setDiscount(0);
-      const leadProduct = res.data;
-      setConversionItems([{
-        productId: leadProduct.id,
-        productName: leadProduct.name || lead.formName,
-        sellingPrice: Number(leadProduct.sellingPrice),
+
+      const productToUse = {
+        productId: latestProduct.id,
+        productName: latestProduct.name || lead.formName,
+        sellingPrice: Number(latestProduct.sellingPrice),
         quantity: 1,
-      }]);
-      setProductsForConversion(leadProduct.id ? [leadProduct] : []);
-      setProductPickerMode("");
-      setPickerProductId("");
+      };
 
-      try {
-        const productsRes = await api.get("/api/v1/products", {
-          params: { page: 0, size: 200, sort: "name,asc" },
-        });
-        const availableProducts = productsRes.data.content || [];
-        setProductsForConversion((current) => {
-          const combined = [...availableProducts];
-          if (leadProduct.id && !combined.some((product) => String(product.id) === String(leadProduct.id))) {
-            combined.unshift(leadProduct);
-          }
-          return combined;
-        });
-      } catch (productsErr) {
-        console.error("Failed to load products for conversion", productsErr);
-      }
-      setSelectedCourierId("");
+      setConversionItems([productToUse]);
 
-      // Load active couriers for the picker (non-blocking - conversion still
-      // works fine if this fails or comes back empty)
       try {
         const courierRes = await api.get("/api/v1/couriers/active");
         setCouriers(courierRes.data || []);
@@ -396,7 +410,8 @@ export default function CRM() {
     }
   };
 
-  const openProductPicker = (mode) => {
+  const openProductPicker = async (mode) => {
+    await refreshProductsForConversion(selectedLead?.formName || "");
     setProductPickerMode(mode);
     setPickerProductId("");
   };
@@ -429,14 +444,6 @@ export default function CRM() {
   const convertLead = async () => {
     try {
       setConverting(true);
-      const subtotal = conversionItems.reduce(
-        (sum, item) => sum + Number(item.quantity) * Number(item.sellingPrice),
-        0
-      );
-      const safeDeliveryFee = Number(deliveryFee) >= 0 ? Number(deliveryFee) : 0;
-      const safeDiscount = Number(discount || 0) >= 0 ? Number(discount || 0) : 0;
-      const totalAmount = Math.max(0, subtotal + safeDeliveryFee - safeDiscount);
-
       if (!conversionItems.length || conversionItems.some((item) =>
         !Number.isFinite(Number(item.quantity)) || Number(item.quantity) <= 0 || !item.productId
       )) {
@@ -444,22 +451,32 @@ export default function CRM() {
         return;
       }
 
+      const subtotal = conversionItems.reduce(
+        (sum, item) => sum + Number(item.quantity) * Number(item.sellingPrice || 0),
+        0
+      );
+      const safeDeliveryFee = Number(deliveryFee) >= 0 ? Number(deliveryFee) : 0;
+      const safeDiscount = Number(discount || 0) >= 0 ? Number(discount || 0) : 0;
+      const totalAmount = Math.max(0, subtotal + safeDeliveryFee - safeDiscount);
+
       if (safeDiscount < 0) { alert("Discount cannot be negative."); return; }
       if (safeDiscount > subtotal + safeDeliveryFee) {
         alert("Discount cannot exceed the total order amount."); return;
       }
 
-      const primaryProduct = conversionItems[0];
+      const normalizedItems = conversionItems.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: Number(item.quantity),
+      }));
+
+      const primaryProduct = normalizedItems[0];
       await api.post(`/api/v1/leads/${selectedLead.id}/convert`, {
         productId: primaryProduct.productId,
         productName: primaryProduct.productName,
         formName: primaryProduct.productName,
         quantity: Number(primaryProduct.quantity),
-        items: conversionItems.map((item) => ({
-          productId: item.productId,
-          productName: item.productName,
-          quantity: Number(item.quantity),
-        })),
+        items: normalizedItems,
         deliveryCity,
         deliveryFee: safeDeliveryFee,
         discount: safeDiscount,
