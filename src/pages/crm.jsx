@@ -164,12 +164,14 @@ export default function CRM() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [highlightedLeadId, setHighlightedLeadId] = useState(null);
   const leadRefs = useRef({});
-  const [quantity, setQuantity] = useState(1);
   const [deliveryCity, setDeliveryCity] = useState("");
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [converting, setConverting] = useState(false);
-  const [productPrice, setProductPrice] = useState(0);
+  const [conversionItems, setConversionItems] = useState([]);
+  const [productsForConversion, setProductsForConversion] = useState([]);
+  const [productPickerMode, setProductPickerMode] = useState("");
+  const [pickerProductId, setPickerProductId] = useState("");
   const [noteEdits, setNoteEdits] = useState({});
   const [focusedNoteId, setFocusedNoteId] = useState(null);
   const [extraInfo, setExtraInfo] = useState("");
@@ -192,6 +194,9 @@ export default function CRM() {
     source: "CALL",
   });
   const [savingLead, setSavingLead] = useState(false);
+  const [leadProducts, setLeadProducts] = useState([]);
+  const [loadingLeadProducts, setLoadingLeadProducts] = useState(false);
+  const [leadProductsError, setLeadProductsError] = useState("");
 
   // Toast notifications (live SSE popups)
   const [toasts, setToasts] = useState([]);
@@ -246,6 +251,28 @@ export default function CRM() {
   useEffect(() => {
     fetchLeads();
   }, [page, statusFilter]);
+
+  useEffect(() => {
+    if (!showAddLeadModal) return;
+
+    const fetchLeadProducts = async () => {
+      try {
+        setLoadingLeadProducts(true);
+        setLeadProductsError("");
+        const res = await api.get("/api/v1/products", {
+          params: { page: 0, size: 500, sort: "name,asc" },
+        });
+        setLeadProducts(res.data.content || []);
+      } catch (err) {
+        console.error("Failed to load products for lead form", err);
+        setLeadProductsError("Couldn't load products. Please close and reopen this form to try again.");
+      } finally {
+        setLoadingLeadProducts(false);
+      }
+    };
+
+    fetchLeadProducts();
+  }, [showAddLeadModal]);
 
   useEffect(() => {
     if (!leadId) return;
@@ -315,11 +342,35 @@ export default function CRM() {
       }
       
       setSelectedLead(lead);
-      setQuantity(1);
       setDeliveryCity(lead.location || "");
       setDeliveryFee(0);
       setDiscount(0);
-      setProductPrice(res.data.sellingPrice);
+      const leadProduct = res.data;
+      setConversionItems([{
+        productId: leadProduct.id,
+        productName: leadProduct.name || lead.formName,
+        sellingPrice: Number(leadProduct.sellingPrice),
+        quantity: 1,
+      }]);
+      setProductsForConversion(leadProduct.id ? [leadProduct] : []);
+      setProductPickerMode("");
+      setPickerProductId("");
+
+      try {
+        const productsRes = await api.get("/api/v1/products", {
+          params: { page: 0, size: 200, sort: "name,asc" },
+        });
+        const availableProducts = productsRes.data.content || [];
+        setProductsForConversion((current) => {
+          const combined = [...availableProducts];
+          if (leadProduct.id && !combined.some((product) => String(product.id) === String(leadProduct.id))) {
+            combined.unshift(leadProduct);
+          }
+          return combined;
+        });
+      } catch (productsErr) {
+        console.error("Failed to load products for conversion", productsErr);
+      }
       setSelectedCourierId("");
 
       // Load active couriers for the picker (non-blocking - conversion still
@@ -345,22 +396,70 @@ export default function CRM() {
     }
   };
 
+  const openProductPicker = (mode) => {
+    setProductPickerMode(mode);
+    setPickerProductId("");
+  };
+
+  const applyPickedProduct = () => {
+    const product = productsForConversion.find(
+      (item) => String(item.id) === String(pickerProductId)
+    );
+    if (!product) return;
+
+    const selectedProduct = {
+      productId: product.id,
+      productName: product.name,
+      sellingPrice: Number(product.sellingPrice),
+      quantity: 1,
+    };
+
+    if (productPickerMode === "change") {
+      setConversionItems((items) => items.map((item, index) => index === 0
+        ? { ...selectedProduct, quantity: item.quantity }
+        : item));
+    } else {
+      setConversionItems((items) => [...items, selectedProduct]);
+    }
+    setProductPickerMode("");
+    setPickerProductId("");
+  };
+
   // ── Convert lead ─────────────────────────────────────────────────────────────
   const convertLead = async () => {
     try {
       setConverting(true);
-      const subtotal = Number(quantity) * Number(productPrice);
+      const subtotal = conversionItems.reduce(
+        (sum, item) => sum + Number(item.quantity) * Number(item.sellingPrice),
+        0
+      );
       const safeDeliveryFee = Number(deliveryFee) >= 0 ? Number(deliveryFee) : 0;
       const safeDiscount = Number(discount || 0) >= 0 ? Number(discount || 0) : 0;
       const totalAmount = Math.max(0, subtotal + safeDeliveryFee - safeDiscount);
+
+      if (!conversionItems.length || conversionItems.some((item) =>
+        !Number.isFinite(Number(item.quantity)) || Number(item.quantity) <= 0 || !item.productId
+      )) {
+        alert("Add products with a valid quantity before converting.");
+        return;
+      }
 
       if (safeDiscount < 0) { alert("Discount cannot be negative."); return; }
       if (safeDiscount > subtotal + safeDeliveryFee) {
         alert("Discount cannot exceed the total order amount."); return;
       }
 
+      const primaryProduct = conversionItems[0];
       await api.post(`/api/v1/leads/${selectedLead.id}/convert`, {
-        quantity: Number(quantity),
+        productId: primaryProduct.productId,
+        productName: primaryProduct.productName,
+        formName: primaryProduct.productName,
+        quantity: Number(primaryProduct.quantity),
+        items: conversionItems.map((item) => ({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: Number(item.quantity),
+        })),
         deliveryCity,
         deliveryFee: safeDeliveryFee,
         discount: safeDiscount,
@@ -416,8 +515,10 @@ export default function CRM() {
   };
 
   // ── Computed totals for modal ────────────────────────────────────────────────
-  const safeQuantity = Number(quantity) > 0 ? Number(quantity) : 1;
-  const subtotal = safeQuantity * Number(productPrice);
+  const subtotal = conversionItems.reduce(
+    (sum, item) => sum + Number(item.quantity || 0) * Number(item.sellingPrice || 0),
+    0
+  );
   const safeDeliveryFee = Number(deliveryFee) >= 0 ? Number(deliveryFee) : 0;
   const safeDiscount = Number(discount) >= 0 ? Number(discount) : 0;
   const totalAmount = Math.max(0, subtotal + safeDeliveryFee - safeDiscount);
@@ -862,21 +963,92 @@ export default function CRM() {
               </div>
               <div>
                 <label className="text-sm text-gray-600">Product</label>
-                <div>{selectedLead.formName}</div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Unit Price</label>
-                <div className="font-medium">
-                  {productPrice > 0
-                    ? `KES ${Number(productPrice).toLocaleString()}`
-                    : <span className="text-gray-400 text-sm">Loading...</span>}
+                <div className="space-y-3 mt-1">
+                  {conversionItems.map((item, index) => (
+                    <div key={`${item.productId || item.productName}-${index}`} className="rounded-lg border border-gray-200 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{item.productName}</div>
+                          <div className="text-sm text-gray-500">
+                            KES {Number(item.sellingPrice).toLocaleString()} each
+                          </div>
+                        </div>
+                        {conversionItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setConversionItems((items) => items.filter((_, itemIndex) => itemIndex !== index))}
+                            className="text-sm text-red-600 hover:text-red-700"
+                            aria-label={`Remove ${item.productName}`}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <label className="block text-xs text-gray-600 mt-2">Quantity</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => setConversionItems((items) => items.map((line, lineIndex) =>
+                          lineIndex === index ? { ...line, quantity: e.target.value } : line
+                        ))}
+                        className="w-full border rounded p-2 mt-1"
+                      />
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Quantity</label>
-                <input type="number" min="1" value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full border rounded p-2 mt-1" />
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => openProductPicker("change")}
+                    className="px-3 py-2 border border-green-600 text-green-700 rounded-lg text-sm font-medium hover:bg-green-50"
+                  >
+                    Change Product
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openProductPicker("add")}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                  >
+                    Add Product
+                  </button>
+                </div>
+                {productPickerMode && (
+                  <div className="mt-3 rounded-lg bg-gray-50 p-3">
+                    <label className="text-sm text-gray-600">
+                      {productPickerMode === "change" ? "Choose replacement product" : "Choose product to add"}
+                    </label>
+                    <select
+                      value={pickerProductId}
+                      onChange={(e) => setPickerProductId(e.target.value)}
+                      className="w-full border rounded p-2 mt-1 bg-white"
+                    >
+                      <option value="">Select a product</option>
+                      {productsForConversion.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name} — KES {Number(product.sellingPrice).toLocaleString()}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex justify-end gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setProductPickerMode("")}
+                        className="px-3 py-1.5 border rounded text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={applyPickedProduct}
+                        disabled={!pickerProductId}
+                        className="px-3 py-1.5 bg-green-600 text-white rounded text-sm disabled:opacity-50"
+                      >
+                        {productPickerMode === "change" ? "Change" : "Add"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-sm text-gray-600">Delivery Fee</label>
@@ -902,7 +1074,7 @@ export default function CRM() {
               </div>
               <div>
                 <label className="text-sm text-gray-600">
-                  Total ({safeQuantity} × KES {Number(productPrice).toLocaleString()} + KES {Number(safeDeliveryFee).toLocaleString()} delivery − KES {Number(safeDiscount).toLocaleString()} discount)
+                  Total (KES {subtotal.toLocaleString()} products + KES {Number(safeDeliveryFee).toLocaleString()} delivery − KES {Number(safeDiscount).toLocaleString()} discount)
                 </label>
                 <div className="text-lg font-bold text-green-600">
                   KES {totalAmount.toLocaleString()}
@@ -941,7 +1113,7 @@ export default function CRM() {
                 Cancel
               </button>
               <button onClick={convertLead}
-                disabled={converting || productPrice === 0}
+                disabled={converting || conversionItems.length === 0}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium disabled:opacity-50 hover:bg-green-700 transition-colors">
                 {converting ? "Converting..." : "Confirm Convert"}
               </button>
@@ -987,9 +1159,24 @@ export default function CRM() {
               </div>
               <div>
                 <label className="text-sm text-gray-600">Product</label>
-                <input type="text" value={newLead.formName}
+                <select
+                  value={newLead.formName}
                   onChange={(e) => setNewLead((p) => ({ ...p, formName: e.target.value }))}
-                  className="w-full border rounded p-2 mt-1" placeholder="e.g. Car jack" />
+                  className="w-full border rounded p-2 mt-1 bg-white"
+                  disabled={loadingLeadProducts}
+                >
+                  <option value="">
+                    {loadingLeadProducts ? "Loading products..." : "Select a product (optional)"}
+                  </option>
+                  {leadProducts.map((product) => (
+                    <option key={product.id} value={product.name}>
+                      {product.name}{product.sku ? ` (${product.sku})` : ""}
+                    </option>
+                  ))}
+                </select>
+                {leadProductsError && (
+                  <div className="text-xs text-red-600 mt-1">{leadProductsError}</div>
+                )}
               </div>
               <div>
                 <label className="text-sm text-gray-600">Location</label>
