@@ -322,6 +322,24 @@ export default function CRM() {
   };
 
   const refreshProductsForConversion = useCallback(async (leadProductName = "") => {
+    let productFromNameLookup = null;
+    if (leadProductName) {
+      try {
+        const lookupRes = await api.get("/api/v1/products/by-name", {
+          params: { name: leadProductName },
+        });
+        const lookupProduct = lookupRes.data;
+        if (
+          lookupProduct?.id &&
+          String(lookupProduct.name).trim().toLowerCase() === String(leadProductName).trim().toLowerCase()
+        ) {
+          productFromNameLookup = lookupProduct;
+        }
+      } catch (lookupErr) {
+        console.warn("Exact product lookup failed; checking the loaded catalog", lookupErr);
+      }
+    }
+
     try {
       const productsRes = await api.get("/api/v1/products", {
         params: { page: 0, size: 200, sort: "name,asc" },
@@ -329,28 +347,36 @@ export default function CRM() {
       const availableProducts = productsRes.data.content || [];
 
       if (leadProductName) {
-        const matchingProduct = availableProducts.find(
+        const matchingProducts = availableProducts.filter(
           (product) => String(product.name).trim().toLowerCase() === String(leadProductName).trim().toLowerCase()
         );
 
-        if (matchingProduct) {
-          setProductsForConversion((current) => {
-            const merged = [...availableProducts];
-            if (!merged.some((product) => String(product.id) === String(matchingProduct.id))) {
-              merged.unshift(matchingProduct);
-            }
-            return merged;
-          });
-          return matchingProduct;
+        // Do not guess when no exact match exists (or duplicate names are ambiguous).
+        if (matchingProducts.length > 1) {
+          setProductsForConversion(availableProducts);
+          return null;
         }
+        if (matchingProducts.length === 1) {
+          setProductsForConversion(availableProducts);
+          return matchingProducts[0];
+        }
+
+        if (productFromNameLookup) {
+          setProductsForConversion([...availableProducts, productFromNameLookup]);
+          return productFromNameLookup;
+        }
+
+        setProductsForConversion(availableProducts);
+        return null;
       }
 
       setProductsForConversion(availableProducts);
-      return availableProducts[0] || null;
+      return null;
     } catch (productsErr) {
       console.error("Failed to load products for conversion", productsErr);
-      setProductsForConversion([]);
-      return null;
+      const fallbackProducts = productFromNameLookup ? [productFromNameLookup] : [];
+      setProductsForConversion(fallbackProducts);
+      return productFromNameLookup;
     }
   }, []);
 
@@ -369,8 +395,8 @@ export default function CRM() {
       if (!latestProduct || !Number(latestProduct.sellingPrice) && Number(latestProduct.sellingPrice) !== 0) {
         const notification = {
           id: Date.now(),
-          title: "Product Not Available",
-          message: `The product "${lead.formName}" is not available in your inventory`,
+          title: "Select a Product",
+          message: `Couldn't uniquely match "${lead.formName}" to a product. Choose the correct product in the conversion window.`,
         };
         setToasts((prev) => [...prev, notification]);
         setTimeout(() => {
@@ -430,9 +456,11 @@ export default function CRM() {
     };
 
     if (productPickerMode === "change") {
-      setConversionItems((items) => items.map((item, index) => index === 0
-        ? { ...selectedProduct, quantity: item.quantity }
-        : item));
+      setConversionItems((items) => items.length === 0
+        ? [selectedProduct]
+        : items.map((item, index) => index === 0
+          ? { ...selectedProduct, quantity: item.quantity }
+          : item));
     } else {
       setConversionItems((items) => [...items, selectedProduct]);
     }
