@@ -478,6 +478,28 @@ export default function Orders() {
     return text.length <= maxLength ? text : `${text.slice(0, maxLength)}…`;
   }
 
+  function getOrderProductLines(order) {
+    const itemList = [order.items, order.orderItems, order.products]
+      .find((value) => Array.isArray(value) && value.length > 0);
+
+    if (itemList) {
+      const lines = itemList
+        .map((item) => {
+          const name = typeof item === "string"
+            ? item
+            : item.productName || item.product?.name || item.name;
+          if (!name) return null;
+          const quantity = item.quantity ?? item.qty;
+          return quantity != null ? `${name} (×${quantity})` : String(name);
+        })
+        .filter(Boolean);
+
+      if (lines.length) return lines;
+    }
+
+    return [order.productName || "-"];
+  }
+
   return (
     <div style={{ padding: 18 }}>
       {/* ✅ Responsive CSS must be INSIDE return */}
@@ -791,7 +813,9 @@ export default function Orders() {
                   </div>
 
                   <div style={{ color: "#374151" }}>
-                    {String(o.productName)}
+                    {getOrderProductLines(o).map((productLine, productIndex) => (
+                      <div key={`${o.id}-product-${productIndex}`}>{productLine}</div>
+                    ))}
                   </div>
 
                   <div style={{ color: "#6b7280" }}>
@@ -859,7 +883,9 @@ export default function Orders() {
                         {String(o.customerName)}
                       </div>
                       <div style={{ color: "#6b7280", marginTop: 2 }}>
-                        {String(o.productName)}
+                        {getOrderProductLines(o).map((productLine, productIndex) => (
+                          <div key={`${o.id}-mobile-product-${productIndex}`}>{productLine}</div>
+                        ))}
                       </div>
                     </div>
 
