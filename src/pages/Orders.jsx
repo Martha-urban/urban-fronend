@@ -501,20 +501,73 @@ export default function Orders() {
   }
 
   return (
-    <div style={{ padding: 18 }}>
-      {/* ✅ Responsive CSS must be INSIDE return */}
+    <div className="orders-page" style={{ padding: 18, width: "100%", minHeight: "100%", boxSizing: "border-box", background: "#f1f5f9" }}>
+      {/*  Responsive CSS must be INSIDE return */}
       <style>{`
         @media (max-width: 768px) {
+          .orders-page {
+            padding: 12px !important;
+            width: 100%;
+            min-height: 100%;
+            box-sizing: border-box;
+            background: #f1f5f9;
+          }
+
           .desktop-table-header,
           .desktop-row {
             display: none !important;
           }
 
+          .orders-table {
+            border-radius: 12px !important;
+          }
+
+          .orders-filter {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px !important;
+          }
+
+          .orders-filter select {
+            min-width: 0;
+            width: 100%;
+            box-sizing: border-box;
+          }
+
           .mobile-card {
             display: block;
-            padding: 14px;
+            padding: 14px 12px;
             border-top: 1px solid #f3f4f6;
             background: #fff;
+          }
+
+          .mobile-card-top {
+            align-items: flex-start !important;
+          }
+
+          .mobile-card-customer {
+            min-width: 0;
+            overflow-wrap: anywhere;
+          }
+
+          .mobile-card-summary {
+            flex: 0 0 auto;
+            max-width: 46%;
+          }
+
+          .mobile-card-products {
+            overflow-wrap: anywhere;
+            line-height: 1.45;
+          }
+
+          .orders-pagination {
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .orders-pagination-controls {
+            width: 100%;
+            justify-content: center;
           }
 
           .responsive-grid-2 {
@@ -538,6 +591,66 @@ export default function Orders() {
 
           .actions-row {
             flex-wrap: wrap;
+          }
+
+          .actions-row button {
+            min-height: 40px;
+            flex: 1 1 120px;
+          }
+
+          .orders-modal-overlay {
+            padding: 8px !important;
+            place-items: center stretch !important;
+            overflow-y: auto;
+          }
+
+          .orders-modal,
+          .orders-modal-small {
+            width: 100% !important;
+            max-width: 100% !important;
+            max-height: calc(100dvh - 16px);
+            overflow-y: auto;
+            padding: 14px !important;
+            border-radius: 14px !important;
+            box-sizing: border-box;
+          }
+
+          .orders-modal-footer {
+            position: sticky;
+            bottom: -14px;
+            padding: 12px 0 2px;
+            background: #fff;
+          }
+
+          .orders-create-button {
+            width: 100%;
+            min-height: 44px;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .orders-page {
+            padding: 8px !important;
+            width: 100%;
+            min-height: 100%;
+            box-sizing: border-box;
+          }
+
+          .header-actions {
+            gap: 6px !important;
+          }
+
+          .header-actions > div {
+            width: 32px !important;
+            height: 32px !important;
+          }
+
+          .orders-filter {
+            grid-template-columns: 1fr !important;
+          }
+
+          .mobile-card-summary {
+            max-width: 52%;
           }
         }
 
@@ -705,7 +818,7 @@ export default function Orders() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <div className="orders-filter" style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
         <select
           value={statusFilter}
           onChange={(e) => {
@@ -748,6 +861,7 @@ export default function Orders() {
 
       {/* Orders Table */}
       <div
+        className="orders-table"
         style={{
           background: "#fff",
           border: "1px solid #e5e7eb",
@@ -877,19 +991,19 @@ export default function Orders() {
 
                 {/* Mobile card */}
                 <div className="mobile-card" style={{ borderLeft: highlight ? `6px solid ${highlight}` : undefined }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                    <div>
+                  <div className="mobile-card-top" style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                    <div className="mobile-card-customer">
                       <div style={{ fontWeight: 900, fontSize: 16 }}>
                         {String(o.customerName)}
                       </div>
-                      <div style={{ color: "#6b7280", marginTop: 2 }}>
+                      <div className="mobile-card-products" style={{ color: "#6b7280", marginTop: 2 }}>
                         {getOrderProductLines(o).map((productLine, productIndex) => (
                           <div key={`${o.id}-mobile-product-${productIndex}`}>{productLine}</div>
                         ))}
                       </div>
                     </div>
 
-                    <div style={{ textAlign: "right" }}>
+                    <div className="mobile-card-summary" style={{ textAlign: "right" }}>
                       <div style={{ fontWeight: 900 }}>{formatMoney(o.totalAmount)}</div>
                       <div style={{ marginTop: 6 }}>
                         <span
@@ -945,6 +1059,7 @@ export default function Orders() {
         {/* Footer pagination */}
         {pageData && (
           <div
+            className="orders-pagination"
             style={{
               display: "flex",
               justifyContent: "space-between",
@@ -961,7 +1076,7 @@ export default function Orders() {
               Showing {orders.length} of {pageData.totalElements} orders
             </div>
 
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <div className="orders-pagination-controls" style={{ display: "flex", gap: 10, alignItems: "center" }}>
               <button
                 style={pageBtnStyle}
                 disabled={page === 0}
@@ -988,8 +1103,8 @@ export default function Orders() {
 
       {/* ADD ORDER MODAL */}
       {isAddOpen && (
-        <div style={modalOverlay} onClick={closeAddModal}>
-          <div style={modalBox} onClick={(e) => e.stopPropagation()}>
+        <div className="orders-modal-overlay" style={modalOverlay} onClick={closeAddModal}>
+          <div className="orders-modal" style={modalBox} onClick={(e) => e.stopPropagation()}>
             <div
               style={{
                 display: "flex",
@@ -1246,8 +1361,8 @@ export default function Orders() {
             )}
 
             {/* Footer */}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-              <button onClick={handleCreateOrder} style={createBtn}>
+            <div className="orders-modal-footer" style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+              <button className="orders-create-button" onClick={handleCreateOrder} style={createBtn}>
                 {loading ? "Saving..." : "Create Order"}
               </button>
             </div>
@@ -1263,8 +1378,8 @@ export default function Orders() {
 
       {/* EDIT STATUS MODAL */}
       {editingOrder && (
-        <div style={modalOverlay} onClick={closeEditModal}>
-          <div style={modalBoxSmall} onClick={(e) => e.stopPropagation()}>
+        <div className="orders-modal-overlay" style={modalOverlay} onClick={closeEditModal}>
+          <div className="orders-modal-small" style={modalBoxSmall} onClick={(e) => e.stopPropagation()}>
             <div
               style={{
                 display: "flex",
@@ -1323,8 +1438,8 @@ export default function Orders() {
       )}
 
       {selectedOrder && (
-        <div style={modalOverlay} onClick={closeNotesModal}>
-          <div style={modalBoxSmall} onClick={(e) => e.stopPropagation()}>
+        <div className="orders-modal-overlay" style={modalOverlay} onClick={closeNotesModal}>
+          <div className="orders-modal-small" style={modalBoxSmall} onClick={(e) => e.stopPropagation()}>
             <div
               style={{
                 display: "flex",

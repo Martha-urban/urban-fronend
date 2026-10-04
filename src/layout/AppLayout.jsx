@@ -9,7 +9,7 @@ export default function AppLayout() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
-    <div className="h-screen w-screen flex bg-slate-100">
+    <div className="h-screen w-full max-w-full min-w-0 flex overflow-hidden bg-slate-100">
       <Sidebar onShowLogoutModal={() => setShowLogoutModal(true)} />
 
       {/* Mobile Sidebar Drawer */}
@@ -28,10 +28,10 @@ export default function AppLayout() {
       )}
 
       {/* Right side */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col">
         <Topbar onMenuClick={() => setMobileOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>
