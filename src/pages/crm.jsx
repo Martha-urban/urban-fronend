@@ -170,8 +170,11 @@ export default function CRM() {
   const [converting, setConverting] = useState(false);
   const [conversionItems, setConversionItems] = useState([]);
   const [productsForConversion, setProductsForConversion] = useState([]);
+  const [conversionProductCatalog, setConversionProductCatalog] = useState([]);
   const [productPickerMode, setProductPickerMode] = useState("");
   const [pickerProductId, setPickerProductId] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [productSearchLoading, setProductSearchLoading] = useState(false);
   const [noteEdits, setNoteEdits] = useState({});
   const [focusedNoteId, setFocusedNoteId] = useState(null);
   const [extraInfo, setExtraInfo] = useState("");
@@ -353,32 +356,82 @@ export default function CRM() {
 
         // Do not guess when no exact match exists (or duplicate names are ambiguous).
         if (matchingProducts.length > 1) {
+          setConversionProductCatalog(availableProducts);
           setProductsForConversion(availableProducts);
           return null;
         }
         if (matchingProducts.length === 1) {
+          setConversionProductCatalog(availableProducts);
           setProductsForConversion(availableProducts);
           return matchingProducts[0];
         }
 
         if (productFromNameLookup) {
-          setProductsForConversion([...availableProducts, productFromNameLookup]);
+          const catalog = [...availableProducts, productFromNameLookup];
+          setConversionProductCatalog(catalog);
+          setProductsForConversion(catalog);
           return productFromNameLookup;
         }
 
+        setConversionProductCatalog(availableProducts);
         setProductsForConversion(availableProducts);
         return null;
       }
 
+      setConversionProductCatalog(availableProducts);
       setProductsForConversion(availableProducts);
       return null;
     } catch (productsErr) {
       console.error("Failed to load products for conversion", productsErr);
       const fallbackProducts = productFromNameLookup ? [productFromNameLookup] : [];
+      setConversionProductCatalog(fallbackProducts);
       setProductsForConversion(fallbackProducts);
       return productFromNameLookup;
     }
   }, []);
+
+  useEffect(() => {
+    if (!productPickerMode) return;
+
+    const query = productSearch.trim();
+    if (!query) {
+      setProductsForConversion(conversionProductCatalog);
+      setProductSearchLoading(false);
+      return;
+    }
+
+    let active = true;
+    const timeoutId = setTimeout(async () => {
+      setProductSearchLoading(true);
+      try {
+        const response = await api.get("/api/v1/products/search", {
+          params: { query },
+        });
+        const data = response.data;
+        const results = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.content)
+            ? data.content
+            : Array.isArray(data?.data)
+              ? data.data
+            : Array.isArray(data?.products)
+              ? data.products
+              : [];
+
+        if (active) setProductsForConversion(results);
+      } catch (searchErr) {
+        console.error("Product search failed", searchErr);
+        if (active) setProductsForConversion([]);
+      } finally {
+        if (active) setProductSearchLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
+  }, [productPickerMode, productSearch, conversionProductCatalog]);
 
   // ── Open convert modal ───────────────────────────────────────────────────────
   const openConvertModal = async (lead) => {
@@ -440,6 +493,7 @@ export default function CRM() {
     await refreshProductsForConversion(selectedLead?.formName || "");
     setProductPickerMode(mode);
     setPickerProductId("");
+    setProductSearch("");
   };
 
   const applyPickedProduct = () => {
@@ -466,6 +520,7 @@ export default function CRM() {
     }
     setProductPickerMode("");
     setPickerProductId("");
+    setProductSearch("");
   };
 
   // ── Convert lead ─────────────────────────────────────────────────────────────
@@ -567,7 +622,6 @@ export default function CRM() {
   const safeDeliveryFee = Number(deliveryFee) >= 0 ? Number(deliveryFee) : 0;
   const safeDiscount = Number(discount) >= 0 ? Number(discount) : 0;
   const totalAmount = Math.max(0, subtotal + safeDeliveryFee - safeDiscount);
-
   // ── Stats ────────────────────────────────────────────────────────────────────
   const totalLeads = pageData?.totalElements || 0;
   const newLeads = leads.filter((l) => l.status === "NEW").length;
@@ -1063,22 +1117,44 @@ export default function CRM() {
                     <label className="text-sm text-gray-600">
                       {productPickerMode === "change" ? "Choose replacement product" : "Choose product to add"}
                     </label>
-                    <select
-                      value={pickerProductId}
-                      onChange={(e) => setPickerProductId(e.target.value)}
+                    <input
+                      type="search"
+                      value={productSearch}
+                      onChange={(e) => {
+                        setProductSearch(e.target.value);
+                        setPickerProductId("");
+                      }}
+                      placeholder="Type a product name or SKU..."
+                      aria-label="Search products"
                       className="w-full border rounded p-2 mt-1 bg-white"
-                    >
-                      <option value="">Select a product</option>
-                      {productsForConversion.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} — KES {Number(product.sellingPrice).toLocaleString()}
-                        </option>
-                      ))}
-                    </select>
+                    />
+                    <div className="mt-2 max-h-48 overflow-y-auto rounded border bg-white" role="listbox" aria-label="Matching products">
+                      {productSearchLoading ? (
+                        <div className="px-3 py-4 text-sm text-gray-500" role="status">Searching products...</div>
+                      ) : productsForConversion.length ? productsForConversion.map((product) => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          role="option"
+                          aria-selected={String(pickerProductId) === String(product.id)}
+                          onClick={() => setPickerProductId(String(product.id))}
+                          className={`block w-full border-b last:border-b-0 px-3 py-2 text-left text-sm hover:bg-green-50 ${String(pickerProductId) === String(product.id) ? "bg-green-100" : ""}`}
+                        >
+                          <span className="block font-medium">{product.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {product.sku ? `${product.sku} · ` : ""}KES {Number(product.sellingPrice).toLocaleString()}
+                          </span>
+                        </button>
+                      )) : (
+                        <div className="px-3 py-4 text-sm text-gray-500" role="status">
+                          {productSearch.trim() ? "No matching products found." : "No products available."}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex justify-end gap-2 mt-2">
                       <button
                         type="button"
-                        onClick={() => setProductPickerMode("")}
+                        onClick={() => { setProductPickerMode(""); setProductSearch(""); setPickerProductId(""); }}
                         className="px-3 py-1.5 border rounded text-sm"
                       >
                         Cancel

@@ -34,16 +34,19 @@ export default function Products() {
     categoryId: "",
   });
 
-  // Load products on mount, page change, or search change
+  // Load products on mount, page change, or debounced search change.
   useEffect(() => {
-    loadProducts();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      loadProducts(page, search, controller.signal);
+    }, search.trim() ? 250 : 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
     // eslint-disable-next-line
   }, [page, search]);
-
-  // Search results should always start from the first page.
-  useEffect(() => {
-    setPage(0);
-  }, [search]);
 
   // Load categories once (for select dropdown)
   useEffect(() => {
@@ -51,27 +54,42 @@ export default function Products() {
     // eslint-disable-next-line
   }, []);
 
-  async function loadProducts() {
+  async function loadProducts(requestPage = page, searchTerm = search, signal) {
     try {
       setLoading(true);
       setError("");
 
-      const res = await api.get("/api/v1/products", {
-        params: {
-          page,
-          size,
-          sort: "createdAt,desc",
-          ...(search.trim() ? { search: search.trim() } : {}),
-        },
+      const query = searchTerm.trim();
+      const res = await api.get("/api/v1/products/search", {
+        params: { query },
+        signal,
       });
 
-      setPageData(res.data);
-      setProducts(res.data.content || []);
+      if (signal?.aborted) return;
+      const data = res.data;
+      const matchingProducts = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.content)
+          ? data.content
+          : Array.isArray(data?.products)
+            ? data.products
+            : Array.isArray(data?.data)
+              ? data.data
+              : [];
+      const totalPages = Math.ceil(matchingProducts.length / size);
+
+      setPageData({
+        totalElements: matchingProducts.length,
+        totalPages,
+        last: requestPage + 1 >= totalPages,
+      });
+      setProducts(matchingProducts.slice(requestPage * size, (requestPage + 1) * size));
     } catch (e) {
+      if (signal?.aborted || e.code === "ERR_CANCELED") return;
       console.log(e);
       setError("Failed to load products. Check backend, token, and CORS.");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
 
@@ -286,7 +304,10 @@ export default function Products() {
           <span style={{ opacity: 0.7 }}>🔍</span>
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setPage(0);
+              setSearch(e.target.value);
+            }}
             placeholder="Search products..."
             style={{
               border: "none",
