@@ -22,7 +22,7 @@ export default function Orders() {
   const [products, setProducts] = useState([]);
 
   // filter state
-
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
   // Create order modal
@@ -500,6 +500,29 @@ export default function Orders() {
     return [order.productName || "-"];
   }
 
+  const filteredOrders = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return orders;
+
+    return orders.filter((order) => {
+      const searchableValues = [
+        order.id,
+        order.customerName,
+        order.phoneNumber,
+        order.orderStatus,
+        niceStatus(order.orderStatus),
+        order.deliveryCity,
+        order.accountNumber,
+        order.deliveryNotes,
+        ...getOrderProductLines(order),
+      ];
+
+      return searchableValues.some((value) =>
+        String(value ?? "").toLowerCase().includes(query)
+      );
+    });
+  }, [orders, search]);
+
   return (
     <div className="orders-page" style={{ padding: 18, width: "100%", minHeight: "100%", boxSizing: "border-box", background: "#f1f5f9" }}>
       {/*  Responsive CSS must be INSIDE return */}
@@ -524,11 +547,12 @@ export default function Orders() {
 
           .orders-filter {
             display: grid !important;
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: 1fr;
             gap: 8px !important;
           }
 
-          .orders-filter select {
+          .orders-filter select,
+          .orders-filter input {
             min-width: 0;
             width: 100%;
             box-sizing: border-box;
@@ -842,9 +866,33 @@ export default function Orders() {
           ))}
         </select>
 
-        {statusFilter && (
+        <input
+          type="search"
+          aria-label="Search orders on this page"
+          placeholder="Search customer, phone, product, city..."
+          value={search}
+          onChange={(e) => {
+            setPage(0);
+            setSearch(e.target.value);
+          }}
+          style={{
+            flex: "1 1 260px",
+            minWidth: 0,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #e5e7eb",
+            background: "#fff",
+            fontSize: 14,
+          }}
+        />
+
+        {(statusFilter || search) && (
           <button
-            onClick={() => setStatusFilter("")}
+            onClick={() => {
+              setStatusFilter("");
+              setSearch("");
+              setPage(0);
+            }}
             style={{
               border: "1px solid #e5e7eb",
               background: "#fff",
@@ -854,7 +902,7 @@ export default function Orders() {
               fontWeight: 800,
             }}
           >
-            Clear Filter
+            Clear Filters
           </button>
         )}
       </div>
@@ -902,7 +950,7 @@ export default function Orders() {
 
         {/* Rows */}
         {!loading &&
-          orders.map((o, idx) => {
+          filteredOrders.map((o, idx) => {
             const s = statusStyle(o.orderStatus);
             const highlight = getParcelAgeHighlight(o);
 
@@ -1052,8 +1100,10 @@ export default function Orders() {
             );
           })}
 
-        {!loading && orders.length === 0 && (
-          <div style={{ padding: 16, color: "#6b7280" }}>No orders found.</div>
+        {!loading && filteredOrders.length === 0 && (
+          <div style={{ padding: 16, color: "#6b7280" }}>
+            {search ? "No orders match your search on this page." : "No orders found."}
+          </div>
         )}
 
         {/* Footer pagination */}
@@ -1073,7 +1123,7 @@ export default function Orders() {
             }}
           >
             <div>
-              Showing {orders.length} of {pageData.totalElements} orders
+              Showing {filteredOrders.length} matching orders on this page ({orders.length} loaded, {pageData.totalElements} total)
             </div>
 
             <div className="orders-pagination-controls" style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -1539,8 +1589,12 @@ export default function Orders() {
 
             <div className="receipt-section">
               <div className="receipt-row">
-                <span>Product</span>
-                <strong>{receiptOrder.productName || "-"}</strong>
+                <span>{getOrderProductLines(receiptOrder).length > 1 ? "Products" : "Product"}</span>
+                <strong>
+                  {getOrderProductLines(receiptOrder).map((productLine, productIndex) => (
+                    <div key={`${receiptOrder.id}-receipt-product-${productIndex}`}>{productLine}</div>
+                  ))}
+                </strong>
               </div>
               <div className="receipt-row receipt-total">
                 <span>Amount Due</span>

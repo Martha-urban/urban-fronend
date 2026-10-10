@@ -13,7 +13,42 @@ function formatDateTime(dateString) {
   })}`;
 }
 
+function getReceiptProductLines(order) {
+  const itemList = [order.items, order.orderItems, order.products]
+    .find((value) => Array.isArray(value) && value.length > 0);
+
+  if (itemList) {
+    const lines = itemList.map((item) => {
+      const name = typeof item === "string"
+        ? item
+        : item.productName || item.product?.name || item.name;
+      if (!name) return null;
+      const quantity = item.quantity ?? item.qty;
+      return quantity != null ? `${name} (×${quantity})` : String(name);
+    }).filter(Boolean);
+
+    if (lines.length) return lines;
+  }
+
+  return [order.productName || "-"];
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]);
+}
+
 function buildReceiptHtml(order, mpesaPaybill) {
+  const productLines = getReceiptProductLines(order);
+  const productsHtml = productLines
+    .map((line) => `<div>${escapeHtml(line)}</div>`)
+    .join("");
+
   return `
     <!doctype html>
     <html>
@@ -141,7 +176,7 @@ function buildReceiptHtml(order, mpesaPaybill) {
           </div>
 
           <div class="section">
-            <div class="row"><span>Product</span><strong>${order.productName || "-"}</strong></div>
+            <div class="row"><span>${productLines.length > 1 ? "Products" : "Product"}</span><strong>${productsHtml}</strong></div>
             <div class="row total"><span>Amount Due</span><span>${formatMoney(order.totalAmount)}</span></div>
           </div>
 
