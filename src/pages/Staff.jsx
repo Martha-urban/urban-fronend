@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api/api";
 import { useAuth } from "../auth/useAuth";
 import PermissionGate from "../auth/PermissionGate";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 
 const PERMISSION_GROUPS = {
   "CRM / Leads":  ["CAN_VIEW_LEADS","CAN_CREATE_LEADS","CAN_UPDATE_LEAD_STATUS","CAN_CONVERT_LEADS"],
@@ -58,6 +59,7 @@ export default function Staff() {
   const [staffList, setStaffList] = useState([]);
   const roles = ["CASHIER", "MANAGER", "STAFF","ATTENDANT"];
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     fullName: "", email: "", phone: "", role: "CASHIER", password: "",
   });
@@ -141,6 +143,7 @@ export default function Staff() {
 
   function openAddModal() {
     setForm({ fullName: "", email: "", phone: "", role: "CASHIER", password: "" });
+    setShowPassword(false);
     setIsAddOpen(true);
   }
 
@@ -327,7 +330,25 @@ export default function Staff() {
               <input name="fullName" value={form.fullName} onChange={handleAddChange} placeholder="Full Name" style={inputStyle} />
               <input name="email" value={form.email} onChange={handleAddChange} placeholder="Email" style={inputStyle} />
               <input name="phone" value={form.phone} onChange={handleAddChange} placeholder="Phone" style={inputStyle} />
-              <input name="password" value={form.password} onChange={handleAddChange} placeholder="Password" type="password" style={inputStyle} />
+              <div style={{ display: "flex", alignItems: "center", border: "1px solid #e5e7eb", borderRadius: 12, paddingRight: 10 }}>
+                <input
+                  name="password"
+                  value={form.password}
+                  onChange={handleAddChange}
+                  placeholder="Password"
+                  type={showPassword ? "text" : "password"}
+                  style={{ ...inputStyle, flex: 1, minWidth: 0, border: "none" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                  style={{ display: "grid", placeItems: "center", border: "none", background: "transparent", color: "#6b7280", padding: 4, cursor: "pointer" }}
+                >
+                  {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                </button>
+              </div>
               <select name="role" value={form.role} onChange={handleAddChange} style={inputStyle}>
                 {roles.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
