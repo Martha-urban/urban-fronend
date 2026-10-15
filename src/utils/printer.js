@@ -167,6 +167,7 @@ function buildReceiptHtml(order, mpesaPaybill) {
             <div class="row"><strong>Order</strong><strong>${String(order.id || "").slice(0, 8).toUpperCase()}</strong></div>
             <div class="row"><span>Date</span><span>${formatDateTime(order.createdAt)}</span></div>
             <div class="row"><span>Status</span><span>${String(order.orderStatus || "").replaceAll("_", " ")}</span></div>
+            <div class="row"><span>Served by</span><span>${escapeHtml(order.servedBy || "-")}</span></div>
           </div>
 
           <div class="section">

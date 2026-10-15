@@ -26,7 +26,23 @@ export function useAuth() {
     const permissions = authorities.filter((a) => !a.startsWith("ROLE_"));
 
     return {
+      id: decoded.id || decoded.userId || decoded.user_id || null,
       email: decoded.sub,
+      name:
+        decoded.name ||
+        decoded.fullName ||
+        [decoded.firstName || decoded.given_name, decoded.lastName || decoded.family_name]
+          .filter(Boolean)
+          .join(" ") ||
+        decoded.preferred_username ||
+        decoded.sub,
+      phoneNumber:
+        decoded.phoneNumber ||
+        decoded.phone_number ||
+        decoded.phone ||
+        decoded.mobile ||
+        decoded.mobileNumber ||
+        "",
       role,
       permissions,
     };

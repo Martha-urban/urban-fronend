@@ -1,10 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api/api";
+import { useAuth } from "../auth/useAuth";
 import { printReceiptToUSB } from "../utils/printer";
 
 const MPESA_PAYBILL = "522522";
 
 export default function Orders() {
+  const { user } = useAuth();
+  const servedByName = user?.name || user?.email || "-";
+  const [servedBy, setServedBy] = useState(
+    user?.phoneNumber ? `${servedByName} · ${user.phoneNumber}` : servedByName
+  );
+
   const [from, setFrom] = useState("2026-02-01");
   const [to, setTo] = useState("2026-02-29");
 
@@ -60,6 +67,55 @@ export default function Orders() {
 
   const [cartItems, setCartItems] = useState([]);
 
+  async function resolveServedBy() {
+    let staff = null;
+
+    if (user?.id) {
+      try {
+        const res = await api.get(`/api/v1/auth/user/${user.id}`);
+        staff = res.data?.data || res.data;
+      } catch (e) {
+        console.warn("Could not load served-by staff by ID", e);
+      }
+    }
+
+    if (!staff && user?.email) {
+      try {
+        const res = await api.get("/api/v1/auth/staffs", {
+          params: { page: 0, size: 500, sort: "createdAt,desc" },
+        });
+        const staffList = res.data?.content || res.data?.data?.content || [];
+        staff = staffList.find(
+          (person) => String(person.email || "").toLowerCase() === user.email.toLowerCase()
+        );
+      } catch (e) {
+        console.warn("Could not find served-by staff by email", e);
+      }
+    }
+
+    const staffName = staff
+      ? [staff.firstName, staff.lastName].filter(Boolean).join(" ") || staff.name || servedByName
+      : servedByName;
+    const phoneNumber = staff?.phoneNumber || staff?.phone || staff?.mobileNumber || staff?.mobile || user?.phoneNumber;
+
+    return phoneNumber ? `${staffName} · ${phoneNumber}` : staffName;
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+    const updateServedBy = async () => {
+      const resolvedServedBy = await resolveServedBy();
+      if (isMounted) {
+        setServedBy(resolvedServedBy);
+      }
+    };
+
+    updateServedBy();
+    return () => {
+      isMounted = false;
+    };
+  }, [user, servedByName]);
+
   // Order status enums
   const ORDER_STATUSES = [
     "AWAITING_DISPATCH",
@@ -95,7 +151,10 @@ export default function Orders() {
     const printReceipt = async () => {
       try {
         setPrintingReceipt(true);
-        await printReceiptToUSB(receiptOrder, MPESA_PAYBILL);
+        await printReceiptToUSB(
+          { ...receiptOrder, servedBy: receiptOrder.servedBy || servedBy },
+          MPESA_PAYBILL
+        );
       } catch (e) {
         console.error("Receipt print failed:", e);
       } finally {
@@ -424,7 +483,13 @@ export default function Orders() {
       await loadOrders();
 
       if (editStatus === "DISPATCHED_UNPAID") {
-        setReceiptOrder({ ...editingOrder, orderStatus: editStatus });
+        const resolvedServedBy = await resolveServedBy();
+        setServedBy(resolvedServedBy);
+        setReceiptOrder({
+          ...editingOrder,
+          orderStatus: editStatus,
+          servedBy: resolvedServedBy,
+        });
       }
 
       alert("Order status updated!");
@@ -1569,6 +1634,10 @@ export default function Orders() {
               <div className="receipt-row">
                 <span>Status</span>
                 <span>{niceStatus(receiptOrder.orderStatus)}</span>
+              </div>
+              <div className="receipt-row">
+                <span>Served by</span>
+                <span>{receiptOrder.servedBy || servedBy}</span>
               </div>
             </div>
 
