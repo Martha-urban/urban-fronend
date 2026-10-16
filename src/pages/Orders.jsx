@@ -6,7 +6,7 @@ import { printReceiptToUSB } from "../utils/printer";
 const MPESA_PAYBILL = "522522";
 
 export default function Orders() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const servedByName = user?.name || user?.email || "-";
   const [servedBy, setServedBy] = useState(
     user?.phoneNumber ? `${servedByName} · ${user.phoneNumber}` : servedByName
@@ -38,6 +38,10 @@ export default function Orders() {
   // Edit status modal
   const [editingOrder, setEditingOrder] = useState(null);
   const [editStatus, setEditStatus] = useState("AWAITING_DISPATCH");
+  const [cashPaymentOrder, setCashPaymentOrder] = useState(null);
+  const [cashPaymentAmount, setCashPaymentAmount] = useState("");
+  const [cashPaymentError, setCashPaymentError] = useState("");
+  const [recordingCashPayment, setRecordingCashPayment] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [noteText, setNoteText] = useState("");
   const [noteError, setNoteError] = useState("");
@@ -240,6 +244,19 @@ export default function Orders() {
 
   function closeEditModal() {
     setEditingOrder(null);
+  }
+
+  function openCashPaymentModal(order) {
+    setCashPaymentOrder(order);
+    setCashPaymentAmount(Number(order.totalAmount || 0).toFixed(2));
+    setCashPaymentError("");
+  }
+
+  function closeCashPaymentModal() {
+    if (recordingCashPayment) return;
+    setCashPaymentOrder(null);
+    setCashPaymentAmount("");
+    setCashPaymentError("");
   }
 
   function formatMoney(value) {
@@ -499,6 +516,46 @@ export default function Orders() {
       alert("Failed to update status. check your inventory");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleRecordCashPayment() {
+    if (!cashPaymentOrder?.id) return;
+
+    const amount = Number(cashPaymentAmount);
+    const orderTotal = Number(cashPaymentOrder.totalAmount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setCashPaymentError("Enter a payment amount greater than zero.");
+      return;
+    }
+    if (orderTotal > 0 && amount > orderTotal) {
+      setCashPaymentError("Payment amount cannot exceed the order total.");
+      return;
+    }
+
+    try {
+      setRecordingCashPayment(true);
+      setCashPaymentError("");
+
+      await api.post("/api/v1/payments", {
+        orderId: cashPaymentOrder.id,
+        method: "CASH",
+        amount,
+        payerName: cashPaymentOrder.customerName || null,
+        payerPhone: cashPaymentOrder.phoneNumber || null,
+      });
+
+      setCashPaymentOrder(null);
+      setCashPaymentAmount("");
+      await loadOrders();
+      alert("Cash payment recorded successfully.");
+    } catch (e) {
+      console.error("Could not record cash payment:", e);
+      setCashPaymentError(
+        e.response?.data?.message || "Failed to record cash payment. Check your payment permission and backend."
+      );
+    } finally {
+      setRecordingCashPayment(false);
     }
   }
 
@@ -1093,6 +1150,11 @@ export default function Orders() {
                   </div>
 
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {can("CAN_CREATE_PAYMENTS") && ["DISPATCHED_UNPAID", "DELIVERED_UNPAID"].includes(o.orderStatus) && (
+                      <button onClick={() => openCashPaymentModal(o)} style={cashPaymentBtn}>
+                         Record Cash
+                      </button>
+                    )}
                     <button onClick={() => openEditModal(o)} style={editBtn}>
                       ✏️ Edit
                     </button>
@@ -1153,6 +1215,11 @@ export default function Orders() {
                   </div>
 
                   <div className="actions-row" style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+                    {can("CAN_CREATE_PAYMENTS") && ["DISPATCHED_UNPAID", "DELIVERED_UNPAID"].includes(o.orderStatus) && (
+                      <button onClick={() => openCashPaymentModal(o)} style={cashPaymentBtn}>
+                        💵 Record Cash
+                      </button>
+                    )}
                     <button onClick={() => openEditModal(o)} style={editBtn}>
                       ✏️ Edit
                     </button>
@@ -1552,6 +1619,56 @@ export default function Orders() {
         </div>
       )}
 
+      {cashPaymentOrder && (
+        <div className="orders-modal-overlay" style={modalOverlay} onClick={closeCashPaymentModal}>
+          <div className="orders-modal-small" style={modalBoxSmall} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h3 style={{ margin: 0 }}>Record Cash Payment</h3>
+              <button onClick={closeCashPaymentModal} style={xBtn} disabled={recordingCashPayment}>
+                ✖
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 10, color: "#6b7280" }}>
+              Order: <b>{String(cashPaymentOrder.id).slice(0, 8).toUpperCase()}</b>
+            </div>
+            <div style={{ marginBottom: 14, color: "#374151" }}>
+              Customer: <b>{cashPaymentOrder.customerName || "-"}</b>
+              <br />
+              Order total: <b>{formatMoney(cashPaymentOrder.totalAmount)}</b>
+              <br />
+              Payment method: <b>Cash</b>
+            </div>
+
+            <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>Amount received (KES)</label>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={cashPaymentAmount}
+              onChange={(e) => setCashPaymentAmount(e.target.value)}
+              style={inputStyle}
+              disabled={recordingCashPayment}
+            />
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+              <button onClick={closeCashPaymentModal} style={cancelBtn} disabled={recordingCashPayment}>
+                Cancel
+              </button>
+              <button onClick={handleRecordCashPayment} style={cashPaymentBtn} disabled={recordingCashPayment}>
+                {recordingCashPayment ? "Recording..." : "Confirm Cash Payment"}
+              </button>
+            </div>
+
+            {cashPaymentError && (
+              <div style={{ marginTop: 10, color: "crimson", fontWeight: 700 }}>
+                {cashPaymentError}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {selectedOrder && (
         <div className="orders-modal-overlay" style={modalOverlay} onClick={closeNotesModal}>
           <div className="orders-modal-small" style={modalBoxSmall} onClick={(e) => e.stopPropagation()}>
@@ -1733,6 +1850,17 @@ const editBtn = {
   border: "1px solid #e5e7eb",
   background: "#f9fafb",
   padding: "8px 10px",
+  borderRadius: 10,
+  cursor: "pointer",
+  fontWeight: 900,
+  fontSize: 12,
+};
+
+const cashPaymentBtn = {
+  border: "none",
+  background: "#15803d",
+  color: "#fff",
+  padding: "9px 11px",
   borderRadius: 10,
   cursor: "pointer",
   fontWeight: 900,
